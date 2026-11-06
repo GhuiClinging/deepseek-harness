@@ -341,3 +341,18 @@ describe('client build environment', () => {
     }
   })
 })
+
+it.each([undefined, 'local', 'brand'])('derives clean and dirty markers from Git for the shared %s build/pack input', async (profile) => {
+  const { repositoryClientBuildProfileEnvironment } = await import('./client-build-environment.ts')
+  const { loadDesktopBrand } = await import('../apps/desktop/scripts/desktop-brand.mjs')
+  const selection = loadDesktopBrand(resolve(root, 'apps/desktop/brands/huigong/brand.json'))
+  const fixtureRoot = repositoryFixture()
+  const env = { DSH_CLIENT_GIT_DIRTY: 'true', DSH_CLIENT_COMMIT_HASH: COMMIT_HASH,
+    DSH_DESKTOP_BRAND: JSON.stringify(selection), DSH_CLIENT_TITLE: 'inherited' }
+  const clean = repositoryClientBuildProfileEnvironment(fixtureRoot, env, profile)
+  expect(clean).not.toHaveProperty('DSH_CLIENT_GIT_DIRTY')
+  expect(clean).not.toHaveProperty('DSH_DESKTOP_BRAND')
+  if (profile === 'brand') expect(clean.DSH_CLIENT_TITLE).toBe('辉总后宫智囊团')
+  writeFileSync(join(fixtureRoot, 'tracked.txt'), 'changed\n')
+  expect(repositoryClientBuildProfileEnvironment(fixtureRoot, env, profile).DSH_CLIENT_GIT_DIRTY).toBe('true')
+})

@@ -68,6 +68,8 @@ Queue 预览启用空白折叠和文档边缘 trim，保留 emoji，并使用 CS
 <a id="shell-and-standard-props"></a>
 ## Shell 与标准 props
 
+空白会话的 Hero 通过 `conversation.content` 注册入口接收可选的普通 `brand.mark/greeting` props。注册入口优先读取不可变的桌面展示快照，再使用浏览器构建默认值 `DSH_CLIENT_BRAND_MARK` 和 `DSH_CLIENT_GREETING`；应用重启后，当前运行时问候语优先于打包默认值。现有品牌标记 Slot 仍有优先权；配置回退内容使用文字标记与问候语，不显示预览徽章。未提供品牌值时，保留本地化标题、鲸鱼和预览徽章。
+
 宽度小于 768px 时，Web 的 View 标签与页头的 20px 左内边距对齐。桌面客户端和较宽的 Web 窗口保留标签额外的 8px 左内边距。
 
 共享图片插槽属性将展示选择与持久化引用分开：`thumbnail` 请求完整缩放的附件列表缩略图，`compact` 请求裁剪的图片方块。每张图片可通过可选的 `label` 提供无障碍展示名称；加载和缓存标识仍使用原始附件引用。`MessageImagesContentInput` 为 root 作用域的 `conversation.images.content` Factory 增加可选的完整 `MessageImageLabels`。消息、工具及 Factory 输入显式携带视图提供的授权 `loadImage` 回调；读取和 URL 缓存仍由资源所有者负责。[ui-attachment](../ui-attachment/README.zh.md) 提供该 Factory，负责渲染与灯箱。
@@ -213,3 +215,5 @@ selector 必须是 owner currency 的纯函数。非 null 返回值作为 `match
 无。
 
 </details>
+
+常驻页头还声明根级列表 `conversation.header.actions`，承载未选择 Session 时同样可用的操作；这些操作位于第一行的 Session 实用控件之后。

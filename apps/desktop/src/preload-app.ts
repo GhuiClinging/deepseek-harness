@@ -1,7 +1,7 @@
 import type { FileSaveResult } from '@deepseek-ai/dsh-client-ui-file-actions/types'
 /** Origin-scoped boot, native directory selection, host paths of picked files, and update presentation with native confirmation actions. */
 
-import type { DesktopChannelState, DesktopChannelChangeResult } from '@deepseek-ai/dsh-client-ui-settings-general/types'
+import type { DesktopChannelState, DesktopChannelChangeResult, DesktopWebState, DesktopWebOpenResult } from '@deepseek-ai/dsh-client-ui-settings-general/types'
 import type { DesktopShortcutInput, ShortcutConfigSnapshot, ShortcutSaveResult } from '@deepseek-ai/dsh-client-shortcuts/protocol'
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { DESKTOP_IPC, SCHEME, type DshDesktopProductApi, type DesktopUpdatePresentation } from './ipc.ts'
@@ -22,6 +22,15 @@ function createProductApi(): DshDesktopProductApi {
         Promise<{ bytes: Uint8Array; mediaType: string }>,
     },
     browser: createDesktopBrowserBridge(),
+    web: {
+      status: () => ipcRenderer.invoke(DESKTOP_IPC.webStatus) as Promise<DesktopWebState>,
+      open: () => ipcRenderer.invoke(DESKTOP_IPC.webOpen) as Promise<DesktopWebOpenResult>,
+      subscribe(listener) {
+        const handle = (_event: Electron.IpcRendererEvent, state: DesktopWebState): void => { listener(state) }
+        ipcRenderer.on(DESKTOP_IPC.webChanged, handle)
+        return () => { ipcRenderer.off(DESKTOP_IPC.webChanged, handle) }
+      },
+    },
     fileDrag: {
       prepare: (source, requestId) => ipcRenderer.invoke(DESKTOP_IPC.fileDragPrepare, source, requestId) as
         Promise<FileDragHandle | undefined>,
@@ -87,6 +96,10 @@ function createProductApi(): DshDesktopProductApi {
 }
 
 if (location.protocol === `${SCHEME}:` && location.hostname === 'app') {
+  if (process.isMainFrame) {
+    const brand: unknown = ipcRenderer.sendSync(DESKTOP_IPC.brandPresentation)
+    if (brand !== undefined) contextBridge.exposeInMainWorld('dshDesktopBrand', brand)
+  }
   contextBridge.exposeInMainWorld('dshOnboarding', {
     hasApiKey: () => ipcRenderer.invoke(DESKTOP_IPC.onboardingApiKey) as Promise<boolean>,
     setActive: (active: boolean) => { ipcRenderer.send(DESKTOP_IPC.onboardingActive, active) },

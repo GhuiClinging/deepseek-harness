@@ -1,0 +1,33 @@
+.active :global([data-conversation-root]) {
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--dsw-alias-bg-base) 65%, transparent),
+    color-mix(in srgb, var(--dsw-alias-bg-base) 65%, transparent)
+  ), var(--dsh-brand-chat-image, none);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.active :global([data-brand-sidebar]) {
+  /* This regional photograph replaces the native sidebar gradient, whose platform selector is more specific. */
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--dsw-specific-sidebar-fill) 55%, transparent),
+    color-mix(in srgb, var(--dsw-specific-sidebar-fill) 55%, transparent)
+  ), var(--dsh-brand-sidebar-image, none) !important;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.editor {
+  padding: 16px 0;
+  border-bottom: 0.5px solid var(--dsw-alias-border-l2);
+}
+
+.title { font-size: 14px; line-height: 20px; }
+.description { margin-top: 4px; color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 18px; }
+.label { display: block; margin: 16px 0 8px; font-size: 13px; }
+.range { display: flex; flex-wrap: wrap; gap: 12px; }
+.range > label { flex: 1; min-width: 140px; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; }
+.error { margin-top: 8px; color: var(--dsw-alias-label-primary); font-size: 12px; line-height: 18px; }

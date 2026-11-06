@@ -8,7 +8,7 @@ import { DESKTOP_IPC, type DshDesktopProductApi } from '../src/ipc.ts'
 
 const electron = vi.hoisted(() => ({
   contextBridge: { exposeInMainWorld: vi.fn() },
-  ipcRenderer: { invoke: vi.fn(), on: vi.fn(), off: vi.fn(), send: vi.fn() },
+  ipcRenderer: { invoke: vi.fn(), sendSync: vi.fn(), on: vi.fn(), off: vi.fn(), send: vi.fn() },
   webUtils: { getPathForFile: vi.fn() },
 }))
 vi.mock('electron', () => electron)
@@ -198,6 +198,23 @@ it('exposes constrained shortcut operations and releases configuration subscript
   off(); expect(electron.ipcRenderer.off).toHaveBeenCalledWith(DESKTOP_IPC.shortcutsChanged, handler)
 })
 
+it('exposes browser launch without accepting a renderer-selected URL and releases state subscriptions', async () => {
+  vi.stubGlobal('location', new URL('dsh-app://app/'))
+  await import('../src/preload-app.ts')
+  const api = electron.contextBridge.exposeInMainWorld.mock.calls.find(([name]) => name === 'dshDesktop')?.[1] as DshDesktopProductApi
+  await api.web.status()
+  await api.web.open()
+  expect(electron.ipcRenderer.invoke.mock.calls).toEqual([[DESKTOP_IPC.webStatus], [DESKTOP_IPC.webOpen]])
+  const listener = vi.fn()
+  const dispose = api.web.subscribe(listener)
+  const handler = electron.ipcRenderer.on.mock.calls.find(([channel]) => channel === DESKTOP_IPC.webChanged)![1] as
+    (event: unknown, state: unknown) => void
+  handler({}, { phase: 'ready', address: 'http://127.0.0.1:3080/' })
+  expect(listener).toHaveBeenCalledWith({ phase: 'ready', address: 'http://127.0.0.1:3080/' })
+  dispose()
+  expect(electron.ipcRenderer.off).toHaveBeenCalledWith(DESKTOP_IPC.webChanged, handler)
+})
+
 it('withholds the product API from same-origin child frames', async () => {
   vi.stubGlobal('location', new URL('dsh-app://app/'))
   vi.stubGlobal('process', { ...process, isMainFrame: false })
@@ -310,4 +327,23 @@ it('exposes channel choices and scoped subscriptions without exposing updater ob
   expect(listener).toHaveBeenCalledWith(state)
   dispose()
   expect(electron.ipcRenderer.off).toHaveBeenCalledWith(DESKTOP_IPC.updatesChannelChanged, handler)
+})
+
+
+it('exposes only the main application document immutable public brand snapshot', async () => {
+  const brand = { name: '辉总后宫智囊团', wordmark: '辉总 · 后宫智囊团', mark: '辉', authenticationMode: 'api-key', updates: 'manual',
+    persona: { name: '彤答应', address: '主人', greeting: '欢迎回来，主人。' } }
+  vi.stubGlobal('location', new URL('dsh-app://app/'))
+  electron.ipcRenderer.sendSync.mockReturnValue(brand)
+  await import('../src/preload-app.ts')
+  expect(electron.ipcRenderer.sendSync).toHaveBeenCalledWith(DESKTOP_IPC.brandPresentation)
+  expect(electron.ipcRenderer.sendSync).toHaveBeenCalledTimes(1)
+  expect(electron.contextBridge.exposeInMainWorld.mock.calls.filter(([name]) => name === 'dshDesktopBrand')).toHaveLength(1)
+  expect(electron.contextBridge.exposeInMainWorld).toHaveBeenCalledWith('dshDesktopBrand', brand)
+  vi.resetModules()
+  vi.clearAllMocks()
+  vi.stubGlobal('process', { ...process, isMainFrame: false })
+  await import('../src/preload-app.ts')
+  expect(electron.ipcRenderer.sendSync).not.toHaveBeenCalled()
+  expect(electron.contextBridge.exposeInMainWorld.mock.calls.some(([name]) => name === 'dshDesktopBrand')).toBe(false)
 })

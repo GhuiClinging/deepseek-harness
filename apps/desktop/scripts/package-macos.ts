@@ -1,5 +1,6 @@
 /** Build the ZIP and DMG from separate signed application copies with overlapping notarization. */
 
+import { desktopPackageIdentity } from './desktop-brand.mjs'
 import { execFile } from 'node:child_process'
 import { mkdtemp, rename, rm, stat } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
@@ -78,7 +79,8 @@ export async function packageMacOSArtifacts(
   const expected = resolveMacOSSigningEnvironment(environment)
   const credentials = resolveMacOSNotarizationEnvironment(environment)
   const update = resolveDesktopAutoUpdateConfig(environment, 'darwin', arch)
-  const appPath = join(artifactsRoot, arch === 'arm64' ? 'mac-arm64' : 'mac', 'DeepSeek Harness.app')
+  const identity = desktopPackageIdentity(environment)
+  const appPath = join(artifactsRoot, arch === 'arm64' ? 'mac-arm64' : 'mac', `${identity.name}.app`)
   const root = await mkdtemp(join(dirname(artifactsRoot), 'notarization-'))
   const zipApp = join(root, 'zip', basename(appPath))
   const dmgApp = join(root, 'dmg', basename(appPath))
@@ -110,7 +112,7 @@ export async function packageMacOSArtifacts(
     await verifyMacOSAppUpdateConfig(dmgApp, update)
     apple.verifySignature(zipApp, expected)
     apple.verifySignature(dmgApp, expected)
-    const base = `deepseek-harness-${version}-mac-${arch}`
+    const base = `${identity.artifactPrefix}-${version}-mac-${arch}`
     const artifacts = [
       [dmgOutput, `${base}.dmg`],
       [zipOutput, `${base}.zip`],

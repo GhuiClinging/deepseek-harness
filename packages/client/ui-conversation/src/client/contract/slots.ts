@@ -228,6 +228,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     }
     /** Resident navigation container, including when no Session is selected. */
     'conversation.header': { kind: 'single'; scope: 'session-maybe' }
+    /** Global header actions available before a Session exists. */
+    'conversation.header.actions': { kind: 'list'; scope: 'root' }
     /** Strict per-Session title, actions, and View navigation. */
     'conversation.session.header': {
       kind: 'single'
@@ -458,6 +460,8 @@ export type ConvViewProps = PropsRuntime<'conversation.view'>
 
 /** Business callbacks injected into the resident Conversation shell. */
 export interface ConversationInjected {
+  /** Plain deployment mark and current greeting used by the blank-session hero. */
+  readonly brand?: { readonly mark: string; readonly greeting: string }
   /** Connect and open a blank Session in the selected Workspace. */
   selectWorkspace: (workspaceId: WorkspaceId) => Promise<void>
   /** Session-addressed composer block source, or the stable absent source. */
@@ -668,7 +672,7 @@ export type ConversationSessionSlotProps =
 /** Full props of the resident navigation header. */
 export type ConversationHeaderProps =
   PropsRuntime<'conversation.header'>
-  & PropsRenderSlots<'conversation.header.leading' | 'conversation.session.header'>
+  & PropsRenderSlots<'conversation.header.leading' | 'conversation.header.actions' | 'conversation.session.header'>
 
 /** Full props of the strict Session header. */
 export type ConversationSessionHeaderSlotProps =

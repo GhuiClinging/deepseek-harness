@@ -32,7 +32,7 @@ export function resolveDesktopBuildTarget(
 ): DesktopAutoUpdateTarget
 
 /**
- * Return the mutable preparation and artifact directories owned by one release target.
+ * Return mutable preparation and artifact directories owned by one brand and release target.
  * @param target - Supported Desktop target name.
  * @param environment - Packaging environment with an optional absolute cache directory.
  * @returns Target paths plus shared download and package caches.

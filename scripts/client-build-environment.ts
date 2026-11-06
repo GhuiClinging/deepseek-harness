@@ -1,3 +1,4 @@
+import { resolveDesktopBrandEnvironment } from '../apps/desktop/scripts/desktop-brand.mjs'
 import { createHash } from 'node:crypto'
 import { execFileSync, spawnSync } from 'node:child_process'
 import {
@@ -181,8 +182,8 @@ function clientBuildEnvironment(environment: NodeJS.ProcessEnv): ClientBuildEnvi
 
 /**
  * Resolve the exact public environment selected for a complete client build.
- * Named profiles discard inherited public overrides. Local builds retain the supplied
- * commit, version, and true dirty marker; repositoryClientBuildEnvironment supplies that metadata.
+ * Named profiles discard inherited public overrides. Local and brand builds retain the supplied
+ * commit, version, and true dirty marker; the brand profile requires a validated Desktop carrier.
  * @param environment - parent process environment.
  * @param profile - explicit profile, or the non-public selector when omitted.
  * @returns the inherited public values when no profile is selected, otherwise the named profile.
@@ -192,7 +193,7 @@ export function resolveClientBuildEnvironment(
   profile: string | undefined = environment[CLIENT_BUILD_PROFILE_SELECTOR],
 ): ClientBuildEnvironment {
   if (profile === undefined) return clientBuildEnvironment(environment)
-  if (profile === 'official' || profile === 'local') {
+  if (profile === 'official' || profile === 'local' || profile === 'brand') {
     const commitHash = environment[CLIENT_COMMIT_HASH_VARIABLE]
     const version = environment[CLIENT_VERSION_VARIABLE]
     if (commitHash === undefined) {
@@ -201,16 +202,41 @@ export function resolveClientBuildEnvironment(
     if (version === undefined) {
       throw new Error(`${CLIENT_VERSION_VARIABLE} is required for the ${profile} client build profile`)
     }
+    const selected = profile === 'brand' ? resolveDesktopBrandEnvironment(environment) : undefined
+    if (profile === 'brand' && selected === undefined) throw new Error('desktop brand: brand client profile requires DSH_DESKTOP_BRAND')
     return {
+      ...(selected === undefined ? {} : {
+        DSH_CLIENT_TITLE: selected.brand.name, DSH_CLIENT_BRAND_WORDMARK: selected.brand.wordmark,
+        DSH_CLIENT_BRAND_MARK: selected.brand.mark, DSH_CLIENT_GREETING: selected.brand.persona.greeting,
+        ...(selected.brand.logo === undefined ? {} : { DSH_CLIENT_BRAND_LOGO: selected.brand.logo }),
+      }),
       DSH_CLIENT_COMMIT_HASH: commitHash,
       DSH_CLIENT_VERSION: version,
       ...(profile === 'official' ? OFFICIAL_CLIENT_BUILD_ENVIRONMENT : {
-        DSH_CLIENT_BUILD_PROFILE: 'local',
+        DSH_CLIENT_BUILD_PROFILE: profile,
         ...(environment.DSH_CLIENT_GIT_DIRTY === 'true' ? { DSH_CLIENT_GIT_DIRTY: 'true' } : {}),
       }),
     }
   }
-  throw new Error(`unknown client build profile ${JSON.stringify(profile)}; expected "official" or "local"`)
+  throw new Error(`unknown client build profile ${JSON.stringify(profile)}; expected "official", "local", or "brand"`)
+}
+
+/**
+ * Resolve build and local-pack public values without restoring inherited repository metadata.
+ * @param root - Repository whose Git state and package version own the public metadata.
+ * @param environment - Parent environment carrying public extensions and an optional internal brand selection.
+ * @param profile - Requested client profile; defaults to the parent selector.
+ * @returns Repository-derived public values resolved for the selected profile.
+ */
+export function repositoryClientBuildProfileEnvironment(
+  root: string,
+  environment: NodeJS.ProcessEnv = process.env,
+  profile: string | undefined = environment[CLIENT_BUILD_PROFILE_SELECTOR],
+): ClientBuildEnvironment {
+  return resolveClientBuildEnvironment({
+    DSH_DESKTOP_BRAND: environment.DSH_DESKTOP_BRAND,
+    ...repositoryClientBuildEnvironment(root, environment),
+  }, profile)
 }
 
 /**

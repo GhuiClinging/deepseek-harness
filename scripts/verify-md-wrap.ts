@@ -71,7 +71,9 @@ function findViolations(absPath: string): Violation[] {
   return out
 }
 
-const files = uniqueRepoFiles(root, PATTERNS, isArchivedAgentNotePath)
+const files = uniqueRepoFiles(root, PATTERNS, path => isArchivedAgentNotePath(path)
+  // This replay sidecar preserves literal model input; documentation reflow would change the request oracle.
+  || path === 'snapshots/web/huigong-persona/system-prompt.expected.md')
 const all = files.flatMap(file => findViolations(file.abs))
 const checked = files.length
 

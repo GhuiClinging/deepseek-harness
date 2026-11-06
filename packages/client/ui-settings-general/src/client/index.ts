@@ -26,6 +26,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
+import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type {} from '@deepseek-ai/dsh-client-product-analytics/client'
 import type {
   SettingsOnboardingStep, SettingsRootInjected, SettingsSectionRow,
@@ -34,7 +35,13 @@ import type { ShortcutCommandId } from '@deepseek-ai/dsh-client-shortcuts/client
 import { createSettingsShellStore } from './shell-store.ts'
 import { SettingsRoot } from './SettingsRoot.tsx'
 import { DesktopUpdateBadge } from './DesktopUpdateIndicator.tsx'
-import type { DesktopUpdateBridge } from '../types.ts'
+import type { AppearancePreferences, DesktopUpdateBridge, DesktopWebBridge, LocalProfile } from '../types.ts'
+import { bindAppearance } from './appearance/bind.ts'
+import { AppearanceEditor, AppearanceToast } from './appearance/AppearanceEditor.tsx'
+import { DesktopWebSource } from './desktop-web-source.ts'
+import { DesktopWebEntry, DesktopWebToast } from './DesktopWebEntry.tsx'
+import { LocalProfileSource } from './local-profile-source.ts'
+import { LocalProfileEditor, LocalProfileToast, LocalProfileTrigger } from './LocalProfile.tsx'
 import { DesktopChannelSource } from './desktop-channel-source.ts'
 import { DesktopChannelRow, DesktopChannelToast } from './DesktopChannelRow.tsx'
 import { DesktopUpdateSource } from './desktop-update-source.ts'
@@ -103,10 +110,59 @@ export function apply(ctx: ClientContext): void {
   }, CurrentVersionRow))
   ctx.effect(() => ctx.locale.register(NS, { zh, en, ja, es, fr, de, ru, pt }), 'ui-settings-general: dictionaries')
   const connection = ctx.get('connection') as ConnectionHandle
-  const carrier = (globalThis as typeof globalThis & { dshDesktop?: { protocolVersion: number; updates?: DesktopUpdateBridge } }).dshDesktop
-  const desktopUpdate = new DesktopUpdateSource(carrier?.protocolVersion === 1 ? carrier.updates : undefined)
+  const carrier = (globalThis as typeof globalThis & {
+    dshDesktop?: { protocolVersion: number; updates?: DesktopUpdateBridge; web?: DesktopWebBridge }
+  }).dshDesktop
+  const manualUpdates = (globalThis as typeof globalThis & { dshDesktopBrand?: { readonly updates: 'manual' } })
+    .dshDesktopBrand?.updates === 'manual'
+  const updates = !manualUpdates && carrier?.protocolVersion === 1 ? carrier.updates : undefined
+  const desktopUpdate = new DesktopUpdateSource(updates)
   ctx.effect(() => () => { desktopUpdate.dispose() }, 'ui-settings-general: desktop update carrier')
-  const channelBridge = carrier?.protocolVersion === 1 ? carrier.updates?.channels : undefined
+  const webBridge = carrier?.protocolVersion === 1 ? carrier.web : undefined
+  if (webBridge !== undefined) {
+    const web = new DesktopWebSource(webBridge)
+    ctx.effect(() => () => { web.dispose() }, 'ui-settings-general: desktop browser entry')
+    ctx.slots.inject('conversation.header.actions', () => ctx.slots.register({
+      name: 'conversation.header.actions', id: 'desktop-web', locale: NS,
+      inject: () => ({ hooks: { web: web.store }, open: () => web.open() }),
+    }, DesktopWebEntry))
+    ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+      name: 'shell.overlay', id: 'desktop-web-result', locale: NS,
+      inject: () => ({ hooks: { web: web.store }, dismiss: (sequence: number) => { web.dismiss(sequence) } }),
+    }, DesktopWebToast))
+  }
+  const branded = process.env.DSH_CLIENT_BUILD_PROFILE === 'brand'
+    || (globalThis as typeof globalThis & { dshDesktopBrand?: { authenticationMode: string } }).dshDesktopBrand?.authenticationMode === 'api-key'
+  const localProfile = branded ? new LocalProfileSource(ctx.configForms.get<LocalProfile>('ui-settings-general')) : undefined
+  const photographedBrand = (globalThis as typeof globalThis & { dshDesktopBrand?: { logo?: string } }).dshDesktopBrand?.logo
+    ?? process.env.DSH_CLIENT_BRAND_LOGO
+  if (branded && photographedBrand !== undefined) {
+    const appearance = bindAppearance(ctx.configForms.get<AppearancePreferences>('ui-settings-general'))
+    const source = appearance.source
+    ctx.effect(() => () => { appearance.dispose() }, 'ui-settings-general: scoped brand appearance')
+    ctx.slots.inject('settings.general.item', () => ctx.slots.register({
+      name: 'settings.general.item', id: 'brand-appearance', order: 7, locale: NS,
+      inject: () => ({ hooks: { appearance: source.form, appearanceState: source.store },
+        save: source.save.bind(source), shuffle: source.shuffle.bind(source), togglePaused: source.togglePaused.bind(source) }),
+    }, AppearanceEditor))
+    ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+      name: 'shell.overlay', id: 'brand-appearance-result', locale: NS,
+      inject: () => ({ hooks: { appearanceState: source.store }, dismiss: source.dismiss.bind(source) }),
+    }, AppearanceToast))
+  }
+  if (localProfile !== undefined) {
+    ctx.effect(() => () => { localProfile.dispose() }, 'ui-settings-general: local profile')
+    ctx.slots.inject('settings.general.item', () => ctx.slots.register({
+      name: 'settings.general.item', id: 'local-profile', order: 5, locale: NS,
+      inject: () => ({ hooks: { profile: localProfile.form, profileSave: localProfile.store },
+        save: (value: LocalProfile) => localProfile.save(value) }),
+    }, LocalProfileEditor))
+    ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+      name: 'shell.overlay', id: 'local-profile-result', locale: NS,
+      inject: () => ({ hooks: { profileSave: localProfile.store }, dismiss: (sequence: number) => { localProfile.dismiss(sequence) } }),
+    }, LocalProfileToast))
+  }
+  const channelBridge = updates?.channels
   if (channelBridge !== undefined) {
     const channel = new DesktopChannelSource(channelBridge)
     ctx.effect(() => () => { channel.dispose() }, 'ui-settings-general: desktop channel')
@@ -248,8 +304,13 @@ export function apply(ctx: ClientContext): void {
       return () => { disposeCommand(); disposeSlot() }
     }))
 
-  ctx.slots.inject('settings.trigger', () =>
-    ctx.slots.register({ name: 'settings.trigger', locale: NS }, TriggerContent))
+  if (localProfile === undefined) {
+    ctx.slots.inject('settings.trigger', () => ctx.slots.register({ name: 'settings.trigger', locale: NS }, TriggerContent))
+  } else {
+    ctx.slots.inject('settings.trigger', () => ctx.slots.register({
+      name: 'settings.trigger', locale: NS, inject: () => ({ hooks: { profile: localProfile.form } }),
+    }, LocalProfileTrigger))
+  }
   ctx.slots.inject('settings.header', () =>
     ctx.slots.register({ name: 'settings.header', locale: NS }, HeaderContent))
   if (documentInjected !== undefined) {

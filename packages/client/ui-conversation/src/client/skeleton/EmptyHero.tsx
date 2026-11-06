@@ -63,6 +63,8 @@ export function WorkspaceChip({ buttonRef, label, menuOpen = false, onClick, t }
 
 /** Hero chrome props. The workspace row rides the InputBar accessory hole, not here. */
 export interface HeroShellProps {
+  /** Deployment copy from the registration owner; omitted retains the localized default. */
+  brand?: ConversationContentProps['brand']
   /** The owner's locale seat, passed down as a plain prop. */
   t: HeroTranslate
   /** Authorized renderer for the hero brand-mark slot. */
@@ -129,7 +131,7 @@ function HeroFish({ hovering }: { hovering: boolean }) {
  * @param props - see {@link HeroShellProps}.
  * @returns the centered hero element tree.
  */
-export function HeroShell({ t, renderSlot, children }: HeroShellProps) {
+export function HeroShell({ t, renderSlot, children, brand }: HeroShellProps) {
   const [hovering, setHovering] = useState(false)
   return (
     <div className={css.root}>
@@ -147,13 +149,13 @@ export function HeroShell({ t, renderSlot, children }: HeroShellProps) {
             onPointerLeave={() => { setHovering(false) }}
           >
             {renderSlot('conversation.hero.brand.mark', { size: 34, className: css.fish }, {
-              fallback: <HeroFish hovering={hovering} />,
+              fallback: brand === undefined ? <HeroFish hovering={hovering} /> : <span className={css.textMark} aria-hidden="true">{brand.mark}</span>,
             })}
           </span>
           <span className={css.titleGroup}>
             {/* Own element: keeps the headline text addressable apart from the badge. */}
-            <span>{t('hero.headline')}</span>
-            <span className={css.previewBadge}>{t('hero.preview')}</span>
+            <span>{brand?.greeting ?? t('hero.headline')}</span>
+            {brand === undefined && <span className={css.previewBadge}>{t('hero.preview')}</span>}
           </span>
         </div>
         <div className={css.body}>

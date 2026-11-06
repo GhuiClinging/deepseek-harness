@@ -1,0 +1,31 @@
+# Bilingual-pair consistency record for 2026-11-05-huigong-brand-appearance.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/superpowers/plans/2026-11-05-huigong-brand-appearance.md
+/:
+  en: 4eca5b115469ffb9
+  zh: 8808e8cb65fba15c
+/huigong-brand-appearance-implementation-plan:
+  en: 4815f3a442f5355d
+  zh: 87f486cf714c02fb
+/huigong-brand-appearance-implementation-plan/constraints-and-decisions:
+  en: 64dfa7a43611f411
+  zh: 314233c3f17a5754
+/huigong-brand-appearance-implementation-plan/review-focus:
+  en: 9c7b5adbe79a4be8
+  zh: 409f0b12709d64aa
+/huigong-brand-appearance-implementation-plan/task-1-compact-browser-action-and-im-defaults:
+  en: d0c95c96adf5cd77
+  zh: 64187a5bd2883938
+/huigong-brand-appearance-implementation-plan/task-2-authenticated-gallery-and-source-assets:
+  en: b9ac7beee0b7b9a9
+  zh: f037dd8244c6e013
+/huigong-brand-appearance-implementation-plan/task-3-scoped-presentation-and-live-appearance-controls:
+  en: ea948d9518d557a3
+  zh: 76bae36c7aff7295
+/huigong-brand-appearance-implementation-plan/task-4-delivery:
+  en: 8de7248c69a47299
+  zh: 71719bba1c596b17
+/huigong-brand-appearance-implementation-plan/evidence:
+  en: a8dee2c4bf89b625
+  zh: 60ae727c83bc0d21

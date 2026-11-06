@@ -24,6 +24,7 @@ export function ConversationHeader({ sessionId, useSession, useConversation, ren
         // Hero centers its input card at the same offset before a Session exists.
         ? <div className={css.titleRow} />
         : renderSlot('conversation.session.header', { hideChrome: blank })}
+      <div className={css.globalActions}>{renderSlot('conversation.header.actions', {})}</div>
     </header>
   )
 }

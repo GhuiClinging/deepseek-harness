@@ -31,9 +31,11 @@ it('forwards the documented pnpm purge command through both package scripts to t
     await symlink(join(root, 'node_modules', dependency), join(directory, 'node_modules', dependency), 'junction')
   }
   await copyFile(join(root, 'apps/desktop/scripts/upload-target.ts'), join(scripts, 'upload-target.ts'))
-  for (const filename of ['desktop-auto-update-environment.mjs', 'desktop-build-paths.mjs']) {
+  for (const filename of ['desktop-auto-update-environment.mjs', 'desktop-build-paths.mjs', 'desktop-brand.mjs']) {
     await copyFile(join(root, 'apps/desktop/scripts', filename), join(scripts, filename))
   }
+  await mkdir(join(directory, 'apps/desktop/src'), { recursive: true })
+  await copyFile(join(root, 'apps/desktop/src/brand.ts'), join(directory, 'apps/desktop/src/brand.ts'))
   // Only command forwarding and parsing are under test; all external work fails closed.
   const stubs = {
     'desktop-package-environment.mjs': "export const loadDesktopPackageEnvironment = () => ({ DSH_DESKTOP_AUTO_UPDATE_ENV: 'production' })",

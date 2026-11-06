@@ -643,6 +643,37 @@ export type OnboardingProcess = 'compact' | 'standard' | 'detailed'
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-client-ui-settings-account -->
 
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-client-ui-settings-general -->
+<a id="deepseek-aidsh-client-ui-settings-general"></a>
+
+## `@deepseek-ai/dsh-client-ui-settings-general`
+
+- `refs`: `Volatile` (`@deepseek-ai/cordis`)
+- `source`: [`packages/client/ui-settings-general/src/index.ts:11`](../packages/client/ui-settings-general/src/index.ts)
+
+```ts config-catalog
+/** Runtime preferences projected to the browser. */
+export interface Config {
+  /** Last acknowledged welcome notice version. */
+  welcomeNoticeVersion: Volatile<string | undefined>
+  /** Local display name, independent of remote accounts and model credentials. */
+  localNickname: Volatile<string>
+  /** Bounded PNG data URL; empty selects the built-in user icon. */
+  localAvatar: Volatile<string>
+  /** Enables the selected brand's scoped photograph presentation. */
+  brandAppearance: boolean
+  /** Immutable packaged artwork directory, supplied by Desktop composition. */
+  brandAssetsDirectory: string
+  /** External image folder; empty uses packaged backgrounds. */
+  backgroundFolder: Volatile<string>
+  /** Lower random rotation delay in seconds. */
+  backgroundMinSeconds: Volatile<number>
+  /** Upper random rotation delay in seconds. */
+  backgroundMaxSeconds: Volatile<number>
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-client-ui-settings-general -->
+
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-client-ui-settings-models -->
 <a id="deepseek-aidsh-client-ui-settings-models"></a>
 
@@ -4935,7 +4966,6 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 | `@deepseek-ai/dsh-client-ui-session` | — | [`packages/client/ui-session/src/index.ts`](../packages/client/ui-session/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-settings` | — | [`packages/client/ui-settings/src/index.ts`](../packages/client/ui-settings/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-settings-agent-loop` | — | [`packages/client/ui-settings-agent-loop/src/index.ts`](../packages/client/ui-settings-agent-loop/src/index.ts) |
-| `@deepseek-ai/dsh-client-ui-settings-general` | — | [`packages/client/ui-settings-general/src/index.ts`](../packages/client/ui-settings-general/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-settings-plugin-inventory` | — | [`packages/client/ui-settings-plugin-inventory/src/index.ts`](../packages/client/ui-settings-plugin-inventory/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-settings-plugins` | — | [`packages/client/ui-settings-plugins/src/index.ts`](../packages/client/ui-settings-plugins/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-settings-session-log` | — | [`packages/client/ui-settings-session-log/src/index.ts`](../packages/client/ui-settings-session-log/src/index.ts) |

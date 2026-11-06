@@ -27,6 +27,10 @@ type WelcomeEventName = 'auth_page_view' | 'auth_page_click' | 'api_key_save_cli
 
 /** Host-owned operations used by the welcome window. */
 export interface WelcomeOperations {
+  /** Brand installations permit API keys only; omitted values retain upstream account onboarding. */
+  readonly authenticationMode?: 'account' | 'api-key'
+  /** Public identity and current role copy; no instructions or credentials. */
+  readonly presentation?: { readonly name: string; readonly wordmark: string; readonly mark: string; readonly greeting: string }
   /** @param eventName - allowed welcome event. @param attributes - approved fields without credentials. */
   analytics?<K extends WelcomeEventName>(eventName: K, attributes: ProductEventMap[K]): Promise<void>
   /** @returns the Host's current effective collection policy. */

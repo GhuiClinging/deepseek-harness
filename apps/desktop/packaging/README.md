@@ -69,7 +69,15 @@ The installer embeds `DSH_DESKTOP_UPDATE_CHANNEL` (`nightly` by default, or `sta
 
 ## Configuration and local builds
 
-Unsigned macOS and Windows packages use the same localized **DSH Local Build** label and version/commit badge as local Web builds. Signed packages keep official branding, including test deployments and macOS builds that skip notarization. Native application and installer names are unchanged.
+Unselected unsigned macOS and Windows packages use the same localized **DSH Local Build** label and version/commit badge as local Web builds. Signed packages keep official branding, including test deployments and macOS builds that skip notarization. Native application and installer names are unchanged without a selected brand.
+
+For the local unsigned Apple Silicon **辉总后宫智囊团** package, use the [brand descriptor and persona instructions](../brands/README.md):
+
+```sh
+pnpm --dir apps/desktop run package:mac:arm64:unsigned --brand brands/huigong/brand.json --build-version 0.2.2-alpha.3.20261105.1 --check
+```
+
+Omit `--check` to build the installer under `apps/desktop/.desktop-build/brands/huigong/targets/mac-arm64/unsigned-artifacts/`. This local package has no signing, notarization, release upload, or automatic-update feed; installer launch and installed upgrades require separate acceptance. The role comes from the selected source descriptor with `personaSource: bundled`; existing local role files remain untouched. Role, package identity, icons, and bundled plugin versions require repackaging.
 
 Set `DSH_PACKAGING_CONFIG_DIR` to the absolute machine configuration directory and `DSH_PACKAGING_PRESET` to `test` or `production` for local Windows commands. The loader reads `presets/<preset>.env`; signed commands additionally read `secrets/windows-signing.env`. Relative certificate and SignTool paths resolve beside the file declaring them. Public presets reject credentials, and the signing file cannot override public settings. Missing configuration fails without falling back to `.env.windows`; commands without a preset retain the existing dotenv behavior. Unsigned and preparation-only presets never read the signing file. Cache maintenance also reads only public preset settings. Test signed packages also require the existing download origin and release ID, but no upload credentials. Local preset commands with `--build-version auto` number from local artifacts only; Actions uses its run number and attempt.
 
@@ -244,7 +252,7 @@ The served `time` is the real packing time, so pnpm 11's default 24-hour `minimu
 
 ## Runtime file selection and installation checks
 
-Desktop packs workspace packages locally and installs external dependencies through the target's bundled Node and pnpm. [Desktop's file policy](../scripts/runtime-file-policy.ts) then filters the immutable `resources/app.asar/dsh/node_modules` copy before signing and integrity sealing. It omits TypeScript declarations, recognized JavaScript/CSS/TypeScript source maps, TypeScript build caches, Domino's test directory and Yarn development metadata, selected native compiler outputs, and node-pty prebuilds for other platforms. Non-Windows targets also omit `node-pty/third_party/conpty`; Windows targets retain that directory. It preserves runtime JavaScript, target native modules and their DLL/EXE helpers, WASM, unknown assets, licenses, and notices. Dependency manifests pass through electron-builder's metadata cleanup before integrity sealing, so archiving preserves their recorded bytes. The policy does not alter npm tarballs, the bundled package manager, or user-installed plugin files.
+Desktop packs workspace packages locally and installs external dependencies through the target's bundled Node and pnpm. [Desktop's file policy](../scripts/runtime-file-policy.ts) then filters the immutable `resources/app.asar/dsh/node_modules` copy before signing and integrity sealing. It omits TypeScript declarations, recognized JavaScript/CSS/TypeScript source maps, TypeScript build caches, `.gitkeep` directory placeholders, Domino's test directory and Yarn development metadata, selected native compiler outputs, and node-pty prebuilds for other platforms. Non-Windows targets also omit `node-pty/third_party/conpty`; Windows targets retain that directory. It preserves runtime JavaScript, target native modules and their DLL/EXE helpers, WASM, unknown assets, licenses, and notices. Dependency manifests pass through electron-builder's metadata cleanup before integrity sealing, so archiving preserves their recorded bytes. The policy does not alter npm tarballs, the bundled package manager, or user-installed plugin files.
 
 The [Electron shell file list](../scripts/electron-builder-config.mjs) excludes recognized JavaScript/CSS/TypeScript source maps and TypeScript build caches from the separate `resources/app.asar/node_modules` dependency collection. These exclusions preserve runtime code, native modules, WASM, data files (including ordinary `.map` assets), licenses, and notices; [shell archive tests](../tests/shell-file-selection.spec.ts) check retained bytes and exclusions.
 

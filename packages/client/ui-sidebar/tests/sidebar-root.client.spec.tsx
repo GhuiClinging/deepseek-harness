@@ -245,6 +245,30 @@ describe('SidebarRoot shell', () => {
     expect(startSession).not.toHaveBeenCalled()
   })
 
+  it.each([false, true])('renders configured fallback identity with collapsed=%s', (collapsed) => {
+    vi.stubEnv('DSH_CLIENT_COMMIT_HASH', '0123456')
+    vi.stubEnv('DSH_CLIENT_GIT_DIRTY', 'true')
+    vi.stubEnv('DSH_CLIENT_VERSION', '1.2.3-rc.4')
+    const { container } = render(<SidebarRoot
+      drawer={false}
+      collapsed={collapsed} width={300} brand={{ mark: '辉', wordmark: '辉总 · 后宫智囊团' }}
+      useSessions={neverHook} useSessionStatus={useSessionStatus} useSessionRetainInfo={neverHook}
+      usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])} useEntryPins={selector => selector([])}
+      useEntryActions={selector => selector(false)} setPinned={vi.fn()}
+      useShortcuts={selector => selector([])}
+      useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook}
+      {...allowAllAccess}
+      startSession={vi.fn()} toggleSidebar={vi.fn()} trackEntryClick={vi.fn()} t={t}
+      renderFactorySlot={() => null}
+      renderSlot={((_key: string, _owner: unknown, options?: { fallback?: ReactNode }) =>
+        options?.fallback ?? null) as SidebarRootComponentProps['renderSlot']}
+    />)
+
+    expect(screen.getAllByText('辉').length).toBeGreaterThan(0)
+    if (!collapsed) expect(screen.getByText('辉总 · 后宫智囊团')).toBeTruthy()
+    expect(container.textContent).not.toContain('DSH Local Build')
+  })
+
   it('renders generic brand fallbacks when no package fills the slots', () => {
     vi.stubEnv('DSH_CLIENT_COMMIT_HASH', '0123456')
     vi.stubEnv('DSH_CLIENT_GIT_DIRTY', 'true')

@@ -58,6 +58,11 @@ let disposeActiveHandlers: (() => void) | undefined
  */
 export async function openWelcomeWindow(locale: DesktopLocale, operations: WelcomeOperations): Promise<BrowserWindow> {
   const options = welcomeWindowOptions(process.platform, locale)
+  options.webPreferences = { ...options.webPreferences, additionalArguments: [
+    ...(options.webPreferences?.additionalArguments ?? []), `--dsh-welcome-authentication=${operations.authenticationMode ?? 'account'}`,
+    ...operations.presentation === undefined ? [] : Object.entries(operations.presentation)
+      .map(([key, value]) => `--dsh-welcome-brand-${key}=${encodeURIComponent(value)}`),
+  ] }
   const window = new BrowserWindow(options)
   disposeActiveHandlers?.()
   let active = true

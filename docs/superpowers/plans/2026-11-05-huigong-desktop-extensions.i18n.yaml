@@ -1,0 +1,34 @@
+# Bilingual-pair consistency record for 2026-11-05-huigong-desktop-extensions.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/superpowers/plans/2026-11-05-huigong-desktop-extensions.md
+/:
+  en: c2abe44322715dc3
+  zh: c2d6f38ddea6d1ce
+/huigong-desktop-extensions-implementation-plan:
+  en: cd7c7c07a86e5c35
+  zh: 5a294625f7064338
+/huigong-desktop-extensions-implementation-plan/global-constraints:
+  en: 2edb1e768c6fe561
+  zh: a4f8d07b87adc036
+/huigong-desktop-extensions-implementation-plan/review-focus:
+  en: 386b2735a96d191b
+  zh: 2f1288b9ba553aa2
+/huigong-desktop-extensions-implementation-plan/task-1-source-owned-persona:
+  en: f7266e2baf271a8c
+  zh: 8799d069df01d125
+/huigong-desktop-extensions-implementation-plan/task-2-bundled-im-plugin:
+  en: 7a7147269e5fa96e
+  zh: 451f8adb924ecce1
+/huigong-desktop-extensions-implementation-plan/task-3-browser-access:
+  en: 0dcdc7b725b36d0f
+  zh: 5dedd19ce9b564b2
+/huigong-desktop-extensions-implementation-plan/task-4-local-profile:
+  en: 75caf39e06b6eccc
+  zh: 48ded8db4c783ea2
+/huigong-desktop-extensions-implementation-plan/task-5-delivery:
+  en: f647c75e9b447cbc
+  zh: 449de52153145dd4
+/huigong-desktop-extensions-implementation-plan/dev-note:
+  en: b9254a0f4b72e94d
+  zh: 213dfb5401d8d54e

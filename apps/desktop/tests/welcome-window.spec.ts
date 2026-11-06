@@ -75,6 +75,21 @@ describe('desktop welcome window', () => {
     }
   })
 
+  it('forwards only public presentation strings through the isolated welcome arguments', async () => {
+    const window = createWindow()
+    electron.create.mockReturnValue(window)
+    const presentation = { name: '辉总后宫智囊团', wordmark: '辉总 · 后宫智囊团', mark: '辉', greeting: '欢迎回来，主人。今天有什么事务交给我？' }
+    await openWelcomeWindow(resolveDesktopLocale('zh-CN', presentation.name), {
+      ...operations, authenticationMode: 'api-key', presentation,
+    })
+    const options = electron.create.mock.calls[0]?.[0] as import('electron').BrowserWindowConstructorOptions
+    expect(options.title).toBe(presentation.name)
+    expect(options.webPreferences?.additionalArguments).toContain('--dsh-welcome-authentication=api-key')
+    for (const [key, value] of Object.entries(presentation)) {
+      expect(options.webPreferences?.additionalArguments).toContain(`--dsh-welcome-brand-${key}=${encodeURIComponent(value)}`)
+    }
+  })
+
   it('waits for its local document and blocks renderer navigation', async () => {
     const window = createWindow()
     const loaded = Promise.withResolvers<undefined>()

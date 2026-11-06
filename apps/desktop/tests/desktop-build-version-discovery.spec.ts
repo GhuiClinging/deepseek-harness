@@ -1,7 +1,7 @@
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   desktopBuildDateSegment,
   suggestDesktopBuildVersion,
@@ -89,4 +89,21 @@ describe('desktop build version discovery', () => {
     await expect(suggestDesktopBuildVersion({ productVersion: PRERELEASE, target: 'win-x64', environment: {}, date: DATE, artifactsRoot }))
       .resolves.toBe(`${PRERELEASE}.${DATE}.3`)
   })
+})
+
+it.each([{}, { DSH_DESKTOP_AUTO_UPDATE_ENV: 'production' }])('numbers the selected brand after local .1 and .4 without consulting upstream uploads (%j)', async (environment) => {
+  const artifactsRoot = await artifactsWith([
+    'huigong-0.2.2-alpha.3.20261105.1-mac-arm64-unsigned.dmg',
+    'huigong-0.2.2-alpha.3.20261105.4-mac-arm64-unsigned.dmg',
+    'deepseek-harness-0.2.2-alpha.3.20261105.9-mac-arm64-unsigned.dmg',
+  ])
+  const cos = await import('../scripts/desktop-cos.ts')
+  const create = vi.spyOn(cos, 'createDesktopCos').mockImplementation(() => { throw new Error('upstream network is forbidden for brand numbering') })
+  try {
+    await expect(suggestDesktopBuildVersion({ productVersion: '0.2.2-alpha.3', target: 'mac-arm64',
+      artifactPrefix: 'huigong', date: '20261105', artifactsRoot,
+      environment,
+    })).resolves.toBe('0.2.2-alpha.3.20261105.5')
+    expect(create).not.toHaveBeenCalled()
+  } finally { create.mockRestore() }
 })

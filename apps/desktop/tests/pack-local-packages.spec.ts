@@ -1,5 +1,7 @@
 /** Exercise local Desktop packing and the official-release rejection through their real entry points. */
 
+import { execFileSync } from 'node:child_process'
+import { loadDesktopBrand } from '../scripts/desktop-brand.mjs'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
@@ -17,6 +19,7 @@ const pnpmEntry = join(dirname(require.resolve('pnpm')), 'bin/pnpm.cjs')
 const tsxHook = pathToFileURL(require.resolve('tsx/esm')).href
 const roots: string[] = []
 const metadata = { DSH_CLIENT_COMMIT_HASH: 'abcdef0', DSH_CLIENT_VERSION: '1.2.3' }
+const brandCarrier = JSON.stringify(loadDesktopBrand(resolve(import.meta.dirname, '../brands/huigong/brand.json')))
 const testTimeout = Math.max(120_000, coverageTestTimeoutOptions(process.env[COVERAGE_TEST_TIMEOUT_ENV]).testTimeout ?? 0)
 const activeRuns = new Map<AbortController, ReturnType<typeof runGate>>()
 
@@ -25,7 +28,7 @@ function write(root: string, path: string, text: string): void {
   writeFileSync(join(root, path), text)
 }
 
-function fixture(profile: 'local' | 'official' = 'local'): string {
+function fixture(profile: 'local' | 'official' | 'brand' = 'local'): string {
   const root = mkdtempSync(join(tmpdir(), 'dsh-local-desktop-pack-'))
   roots.push(root)
   write(root, 'package.json', JSON.stringify({ name: 'desktop-pack-fixture', version: '1.2.3', private: true }))
@@ -36,11 +39,11 @@ function fixture(profile: 'local' | 'official' = 'local'): string {
   write(root, 'packages/client/probe/lib/index.js', 'export const probe = true\n')
   write(root, 'packages/client/probe/lib/client.js', 'export const client = true\n')
   write(root, 'apps/web/dist/index.html', '<title>DSH Local Build</title>\n')
-  writeClientBuildRecord(root, resolveClientBuildEnvironment(metadata, profile))
+  writeClientBuildRecord(root, resolveClientBuildEnvironment({ ...metadata, DSH_DESKTOP_BRAND: brandCarrier }, profile))
   return root
 }
 
-async function pack(root: string, release = false, extra: string[] = []) {
+async function pack(root: string, release = false, extra: string[] = [], ambient: NodeJS.ProcessEnv = {}) {
   const script = release
     ? resolve(import.meta.dirname, '../../../scripts/release/pack.ts')
     : resolve(import.meta.dirname, '../scripts/pack-local-packages.ts')
@@ -52,7 +55,7 @@ async function pack(root: string, release = false, extra: string[] = []) {
       command: process.execPath,
       args: [pnpmEntry, '--dir', root, 'exec', process.execPath, '--import', tsxHook, script,
         ...(release ? ['--family', 'dsh'] : []), '--out', 'packed', '--concurrency', '2', ...extra],
-      env: { npm_execpath: pnpmEntry, DSH_CLIENT_COMMIT_HASH: metadata.DSH_CLIENT_COMMIT_HASH },
+      env: { npm_execpath: pnpmEntry, DSH_CLIENT_COMMIT_HASH: metadata.DSH_CLIENT_COMMIT_HASH, ...ambient },
     }, controller.signal)
     activeRuns.set(controller, pending)
     const result = await pending
@@ -115,4 +118,18 @@ it('rejects an invalid local pack concurrency before replacing packages', async 
   expect(result.code).not.toBe(0)
   expect(result.output).toContain('--concurrency must be a positive integer')
   expect(existsSync(join(root, 'packed'))).toBe(false)
+}, testTimeout)
+
+it.each(['local', 'brand'] as const)('does not restore an ambient dirty marker when packing clean %s artifacts', async (profile) => {
+  const root = fixture(profile)
+  for (const args of [
+    ['init'], ['config', 'user.name', 'DSH test'], ['config', 'user.email', 'dsh-test@example.invalid'],
+    ['config', 'commit.gpgsign', 'false'], ['add', '.'], ['commit', '-m', 'fixture'],
+  ]) execFileSync('git', args, { cwd: root, stdio: 'ignore' })
+  const result = await pack(root, false, [], { DSH_CLIENT_GIT_DIRTY: 'true',
+    ...(profile === 'brand' ? { DSH_DESKTOP_BRAND: brandCarrier } : {}),
+  })
+  expect(result.code, result.output).toBe(0)
+  expect(packedIdentity(join(root, 'packed/deepseek-ai-dsh-probe-1.2.3.tgz')))
+    .toEqual({ name: '@deepseek-ai/dsh-probe', version: '1.2.3' })
 }, testTimeout)

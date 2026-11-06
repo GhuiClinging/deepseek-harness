@@ -23,6 +23,7 @@
     "apps/desktop/src/update-overlay.ts",
     "apps/desktop/src/windows-layout.ts",
     "apps/desktop/tests/**/*.client.spec.tsx",
+    "apps/web/tests/desktop-welcome-layout.e2e.ts",
     // Source-subpath test imports can arrive through workspace links whose
     // realpath semantics vary by host. Load package CSS declarations directly.
     "packages/client/*/src/css-modules.d.ts",

@@ -37,6 +37,13 @@ import css from './SidebarRoot.module.css'
 /** Wide-content unmount delay; matches the 150ms wide-content fade-out. */
 const COLLAPSE_SETTLE_MS = 150
 
+function BrandMark({ mark, logo }: { readonly mark: string; readonly logo?: string }) {
+  const [failed, setFailed] = useState<string>()
+  return logo !== undefined && failed !== logo
+    ? <img className={css.imageMark} src={logo} alt="" onError={() => { setFailed(logo) }} />
+    : <span className={css.textMark} aria-hidden="true">{mark}</span>
+}
+
 /**
  * How long the column's scrollbars stay drawn after the pointer leaves it.
  * The bar is a pointer affordance here, and hiding it on the leave event
@@ -149,6 +156,7 @@ function PanelMoreMenu({ wide, label, entries, onOpen, onPinnedChange, trackEntr
  * @returns the sidebar element tree.
  */
 export function SidebarRoot({
+  brand,
   collapsed,
   width,
   drawer,
@@ -294,7 +302,8 @@ export function SidebarRoot({
       >
         {!wide && !windowsTitlebar && (
           <span className={css.railMark} aria-hidden="true">
-            {renderSlot('sidebar.brand.mark', { size: 24 }, { fallback: <FishLogo size={24} /> })}
+            {renderSlot('sidebar.brand.mark', { size: 24 }, { fallback: brand === undefined ? <FishLogo size={24} />
+              : <BrandMark mark={brand.mark} {...brand.logo === undefined ? {} : { logo: brand.logo }} /> })}
           </span>
         )}
         {/* Rail icons render at 18 (figma rail spec); expanded keeps the glyph-native sizes. */}
@@ -339,21 +348,29 @@ export function SidebarRoot({
             <span className={css.brandIdentity} aria-hidden="true">
               <span className={css.brandMark}>
                 {renderSlot('sidebar.brand.mark', { size: 24 }, {
-                  fallback: buildVersion === undefined
-                    ? <FishLogo size={24} />
-                    : <span className={css.copyVersion} data-copy-version onClick={copyVersion(buildVersion)}><FishLogo size={24} /></span>,
+                  fallback: brand !== undefined
+                    ? <BrandMark mark={brand.mark} {...brand.logo === undefined ? {} : { logo: brand.logo }} />
+                    : buildVersion === undefined
+                      ? <FishLogo size={24} />
+                      : (
+                        <span className={css.copyVersion} data-copy-version onClick={copyVersion(buildVersion)}>
+                          <FishLogo size={24} />
+                        </span>
+                      ),
                 })}
               </span>
               <span className={css.brandName}>
                 {renderSlot('sidebar.brand.name', {}, {
-                  fallback: buildVersion === undefined
-                    ? <span className={css.fallbackBrandName}>{t('brand.localBuild')}</span>
-                    : (
-                      <span className={clsx(css.localBuildBrand, css.copyVersion)} data-copy-version onClick={copyVersion(buildVersion)}>
-                        <span className={css.localBuildTitle}>{t('brand.localBuild')}</span>
-                        <span className={css.buildVersion}>{buildVersion}</span>
-                      </span>
-                    ),
+                  fallback: brand !== undefined
+                    ? <span className={css.fallbackBrandName}>{brand.wordmark}</span>
+                    : buildVersion === undefined
+                      ? <span className={css.fallbackBrandName}>{t('brand.localBuild')}</span>
+                      : (
+                        <span className={clsx(css.localBuildBrand, css.copyVersion)} data-copy-version onClick={copyVersion(buildVersion)}>
+                          <span className={css.localBuildTitle}>{t('brand.localBuild')}</span>
+                          <span className={css.buildVersion}>{buildVersion}</span>
+                        </span>
+                      ),
                 })}
               </span>
             </span>

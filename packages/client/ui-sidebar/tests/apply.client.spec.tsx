@@ -18,6 +18,8 @@ afterEach(async () => {
     for (const owner of owners) await owner.dispose()
   } finally {
     owners.clear()
+    vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
   }
 })
 
@@ -54,6 +56,21 @@ async function bench(declare = true) {
 }
 
 describe('ui-sidebar apply', () => {
+  it('injects runtime identity ahead of build defaults and keeps browser builds configurable', async () => {
+    vi.stubEnv('DSH_CLIENT_BRAND_MARK', 'Build')
+    vi.stubEnv('DSH_CLIENT_BRAND_WORDMARK', 'Build name')
+    vi.stubGlobal('dshDesktopBrand', Object.freeze({ mark: '辉', wordmark: '辉总 · 后宫智囊团' }))
+    const b = await bench()
+    await b.ctx.plugin({ inject: [...inject], apply }).await()
+    const injected = (b.slots.entries('sidebar')[0]!.inject as () => SidebarRootInjected)()
+    expect(injected.brand).toEqual({ mark: '辉', wordmark: '辉总 · 后宫智囊团' })
+    vi.stubGlobal('dshDesktopBrand', undefined)
+    const browser = await bench()
+    await browser.ctx.plugin({ inject: [...inject], apply }).await()
+    expect((browser.slots.entries('sidebar')[0]!.inject as () => SidebarRootInjected)().brand)
+      .toEqual({ mark: 'Build', wordmark: 'Build name' })
+  })
+
   it('keeps the host Loader entry inert', () => {
     expect(hostApply).not.toThrow()
   })

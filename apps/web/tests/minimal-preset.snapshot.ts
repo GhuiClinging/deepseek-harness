@@ -1,5 +1,6 @@
 import { executeToolFixture } from '@deepseek-ai/dsh-tool-testkit'
-import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, unlink, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Browser, Locator, Page } from 'playwright'
@@ -28,6 +29,8 @@ import {
   type WebScaffold,
 } from './scaffold.ts'
 import { expandOwningTurnProcess, newEnglishPage, saveFailureShot } from './support.ts'
+import { parseDesktopBrand } from '../../desktop/src/brand.ts'
+import { prepareDesktopBrandProfile } from '../../desktop/src/brand-profile.ts'
 
 const SNAPSHOT_DIR = fileURLToPath(new URL('../../../snapshots/web/minimal-preset', import.meta.url))
 const FIXTURE = join(SNAPSHOT_DIR, 'session.v3.jsonl')
@@ -40,6 +43,65 @@ function systemPromptText(session: Session): string | undefined {
   const message = session.deriveMessages().find(candidate => candidate.role === 'system')
   return message?.content.flatMap(block => block.type === 'text' ? [block.text] : []).join('')
 }
+
+describe('minimal HuiGong persona', () => {
+  const snapshotDir = fileURLToPath(new URL('../../../snapshots/web/huigong-persona', import.meta.url))
+
+  it('persists the shipped preset persona in the model request', async () => {
+    if (MODE === 'record') throw new Error('the authored HuiGong fixture supports keyless replay and refresh only')
+    const descriptor = JSON.parse(await readFile(new URL('../../desktop/brands/huigong/brand.json', import.meta.url), 'utf8')) as Record<string, unknown>
+    const { icons: _icons, ...metadata } = descriptor
+    const brand = parseDesktopBrand(metadata)
+    const originalPrefix = process.env.DSH_DESKTOP_PERSONA_PREFIX
+    let scaffold: WebScaffold | undefined
+    let handle: AgentHandle | undefined
+    const failures: unknown[] = []
+    const home = await mkdtemp(join(tmpdir(), 'dsh-huigong-snapshot-'))
+    try {
+      const prepared = await prepareDesktopBrandProfile(brand, home)
+      process.env.DSH_DESKTOP_PERSONA_PREFIX = prepared.personaPrefix
+      const fixture = join(snapshotDir, 'session.v4.jsonl')
+      const prompts = fixtureUserPrompts(await readFile(fixture, 'utf8'))
+      expect(prompts).toHaveLength(1)
+      const prompt = prompts[0]
+      if (prompt === undefined) throw new Error('HuiGong fixture requires one user prompt')
+      const running = await launchWebScaffold({ replayFixture: fixture, compareReplaySession: true, harnessHome: home })
+      scaffold = running
+      handle = await running.ctx.agents.create({
+        sessionId: SessionId('huigong-persona-smoke'),
+        meta: { cwd: running.workspaceCwd, agentPreset: 'minimal' },
+        agentOptions: { provider: 'deepseek-official', model: 'deepseek-v4-flash' },
+        setup: agentCtx => running.ctx.agentPresets.mount(agentCtx, 'minimal').then(() => undefined),
+      })
+      handle.agent.followup(createUserMessage({ content: [{ type: 'text', text: prompt }], source: { kind: 'user' } }))
+      await handle.agent.whenIdle()
+      const session = handle.agent.session
+      const system = systemPromptText(session)
+      expect(system).toBe(prepared.personaPrefix)
+      expect(system).toContain('彤答应')
+      expect(system).toContain(brand.persona.instructions)
+      expect(session.requestHeader()?.config).toEqual({ provider: 'deepseek-official', model: 'deepseek-v4-flash' })
+      expect(session.deriveMessages().at(-1)?.content).toEqual([{ type: 'text', text: 'HUIGONG_PERSONA_REQUEST_OK' }])
+      await assertFixtureInventory(snapshotDir, ['session.v4.jsonl', 'system-prompt.expected.md', 'tool-schemas.expected.json'])
+    } catch (error) {
+      failures.push(error)
+    } finally {
+      await handle?.dispose().catch((error: unknown) => failures.push(error))
+      await scaffold?.close().catch((error: unknown) => {
+        if (error instanceof AggregateError) {
+          const nested: readonly unknown[] = error.errors
+          failures.push(...nested)
+        }
+        else failures.push(error)
+      })
+      await rm(home, { recursive: true, force: true }).catch((error: unknown) => failures.push(error))
+      if (originalPrefix === undefined) Reflect.deleteProperty(process.env, 'DSH_DESKTOP_PERSONA_PREFIX')
+      else process.env.DSH_DESKTOP_PERSONA_PREFIX = originalPrefix
+    }
+    if (failures.length === 1) throw failures[0]
+    if (failures.length > 1) throw new AggregateError(failures, 'HuiGong persona snapshot failed')
+  })
+})
 
 describe('minimal agent preset', () => {
   let scaffold: WebScaffold

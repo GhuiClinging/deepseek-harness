@@ -21,6 +21,10 @@ import type { DesktopChannelRowInjected, DesktopChannelToastInjected } from '../
 import type { DesktopChannelBridge } from '../src/types.ts'
 import { GeneralSection } from '../src/client/GeneralSection.tsx'
 import { SettingsDocumentAction } from '../src/client/SettingsDocumentAction.tsx'
+import { DesktopWebEntry } from '../src/client/DesktopWebEntry.tsx'
+import { LocalProfileTrigger, LocalProfileEditor, type LocalProfileEditorInjected } from '../src/client/LocalProfile.tsx'
+import z from '@deepseek-ai/schemastery'
+import type { DesktopWebState } from '../src/types.ts'
 import type { SettingsDocumentActionInjected } from '../src/client/SettingsDocumentAction.tsx'
 
 const SELF = '@deepseek-ai/dsh-client-ui-settings-general'
@@ -97,6 +101,50 @@ function setPageUrl(url: string): void {
 }
 
 describe('ui-settings-general apply', () => {
+  it('registers one Desktop browser action and withdraws its subscription when unloaded', async ({ mock, start }) => {
+    const unsubscribe = vi.fn()
+    let push: ((state: DesktopWebState) => void) | undefined
+    vi.stubGlobal('dshDesktop', { protocolVersion: 1, web: {
+      status: async () => ({ phase: 'ready', address: 'http://127.0.0.1:50000/' }),
+      open: async () => 'opened', subscribe: (listener: (state: DesktopWebState) => void) => { push = listener; return unsubscribe },
+    } })
+    onTestFinished(() => { vi.unstubAllGlobals() })
+    const { c } = await client(mock, start)
+    expect(c.ctx.slots.entries('sidebar.footer.action').filter(entry => entry.component === DesktopWebEntry)).toHaveLength(0)
+    expect(c.ctx.slots.entries('conversation.header.actions').filter(entry => entry.component === DesktopWebEntry)).toHaveLength(1)
+    expect(push).toBeTypeOf('function')
+    await c.unload(SELF)
+    await c.flush()
+    expect(unsubscribe).toHaveBeenCalledOnce()
+    expect(c.ctx.slots.entries('conversation.header.actions').filter(entry => entry.component === DesktopWebEntry)).toHaveLength(0)
+  }, COLD_BOOT_TIMEOUT_MS)
+
+  it('uses the shared Host form for brand identity and persists both local profile fields atomically', async ({ mock, start }) => {
+    vi.stubEnv('DSH_CLIENT_BUILD_PROFILE', 'brand')
+    onTestFinished(() => { vi.unstubAllEnvs() })
+    const profile = (nickname: string, revision: number): SettingsNamespaceView => ({
+      ns: 'ui-settings-general', schema: JSON.parse(JSON.stringify(
+        z.object({ localNickname: z.string(), localAvatar: z.string() }).toJSON(),
+      )) as SettingsNamespaceView['schema'],
+      value: { localNickname: nickname, localAvatar: '' }, autoGenerate: false, applies: 'live', secrets: [], revision,
+    })
+    mock.remote.settings.describe.mockResolvedValue(ok({ writable: true, hasDocument: true,
+      namespaces: [localeView('zh'), profile('郭辉', 0)] }))
+    const c = await start()
+    await c.ctx.configForms.describe().ensure()
+    expect(c.ctx.slots.entries('settings.trigger').some(entry => entry.component === LocalProfileTrigger)).toBe(true)
+    const entry = c.ctx.slots.entries('settings.general.item').find(entry => entry.component === LocalProfileEditor)!
+    const injected = entry.inject?.() as Partial<LocalProfileEditorInjected>
+    if (injected.hooks === undefined || injected.save === undefined) throw new Error('local profile actions are missing')
+    expect(injected.hooks.profile.getSnapshot().value?.localNickname).toBe('郭辉')
+    mock.remote.settings.mutate.mockResolvedValueOnce(ok(profile('辉总', 1)))
+    await expect(injected.save({ localNickname: '辉总', localAvatar: '' })).resolves.toBe(true)
+    expect(mock.remote.settings.mutate).toHaveBeenCalledWith('ui-settings-general', [
+      { op: 'set', path: ['localNickname'], value: '辉总' }, { op: 'set', path: ['localAvatar'], value: '' },
+    ], 0)
+    expect(injected.hooks.profile.getSnapshot().value?.localNickname).toBe('辉总')
+  })
+
   it('declares the services it uses', () => {
     expect(inject).toEqual(['slots', 'locale', 'connection', 'remote', 'remote.settings', 'configForms', 'shortcuts', 'modules', 'remoteAccess'])
   })
@@ -208,6 +256,23 @@ describe('ui-settings-general apply', () => {
     // The (ns, locale) seats are free again — the dictionary disposer ran.
     expect(() => { c.ctx.locale.register(NS, 'zh', {})() }).not.toThrow()
     expect(() => { c.ctx.locale.register(NS, 'en', {})() }).not.toThrow()
+  })
+
+  it('omits upstream update controls for a manual-upgrade installation', async ({ mock, start }) => {
+    const subscribe = vi.fn(() => () => {})
+    const get = vi.fn(async () => ({ channel: 'nightly', packagedChannel: 'nightly', changing: false }))
+    vi.stubGlobal('dshDesktopBrand', { updates: 'manual', name: '辉总后宫智囊团', wordmark: '辉总 · 后宫智囊团', mark: '辉',
+      persona: { name: '彤答应', address: '主人', greeting: '欢迎回来，主人。今天有什么事务交给我？' } })
+    vi.stubGlobal('dshDesktop', { protocolVersion: 1, updates: {
+      status: async () => ({ phase: 'idle' }), open: async () => {}, subscribe,
+      channels: { get, set: async () => {}, subscribe },
+    } })
+    onTestFinished(() => { vi.unstubAllGlobals() })
+    const { c } = await client(mock, start)
+    expect(c.ctx.slots.entries('settings.general.item').some(row => row.options.id === 'desktop-update-channel')).toBe(false)
+    expect(c.ctx.slots.entries('shell.overlay').some(row => row.options.id === 'desktop-channel-toast')).toBe(false)
+    expect(subscribe).not.toHaveBeenCalled()
+    expect(get).not.toHaveBeenCalled()
   })
 
   it('removes the Desktop channel row and shell subscription when its plugin unloads', async ({ mock, start }) => {

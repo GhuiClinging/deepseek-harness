@@ -3,6 +3,20 @@ import { describe, expect, it } from 'vitest'
 import { en, formatDesktopMessage, resolveDesktopLocale, resolveDesktopStartupLocale, ja, zh, es, fr, de, ru, pt } from '../src/locale.ts'
 
 describe('desktop locale dictionaries', () => {
+  it.each(SHIPPED_LOCALE_IDS)('adapts product identity in %s while preserving provider copy and upstream dictionaries', (id) => {
+    const original = resolveDesktopLocale(id)
+    const branded = resolveDesktopLocale(id, '辉总后宫智囊团')
+    expect(branded.messages.aboutProduct).toBe('辉总后宫智囊团')
+    for (const key of ['aboutMenu', 'hideApplication', 'quitApplication', 'openApplication', 'quitTitle', 'startupFailed', 'welcomeTitle', 'welcomeBrand', 'welcomeTaglineBrand', 'updateTitle'] as const) {
+      expect(branded.messages[key], key).not.toContain('DeepSeek Harness')
+      expect(branded.messages[key], key).toContain('辉总后宫智囊团')
+    }
+    expect(branded.messages.welcomeKeyDescription).toContain('DeepSeek')
+    expect(branded.messages.welcomeKeyDescription).not.toContain('Harness')
+    expect(original.messages.aboutProduct).toBe('DeepSeek Harness')
+    expect(resolveDesktopStartupLocale(id, ['en'], '辉总后宫智囊团').messages.aboutProduct).toBe('辉总后宫智囊团')
+  })
+
   it('uses the same concise Chinese configuration error in the toast and details', () => {
     for (const message of [zh.updateConfigurationRead, zh.updateConfigurationFormat, zh.updateConfigurationChannel]) {
       expect(message).toBe('配置文件异常，更新已暂停')

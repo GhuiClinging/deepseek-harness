@@ -16,8 +16,7 @@ import {
   CLIENT_BUILD_RECORD_PATH,
   CLIENT_BUILD_PROFILE_SELECTOR,
   clientBuildProcessEnvironment,
-  repositoryClientBuildEnvironment,
-  resolveClientBuildEnvironment,
+  repositoryClientBuildProfileEnvironment,
   writeClientBuildRecord,
 } from './client-build-environment.ts'
 import { aggregateBuildArgs, aggregateCheckArgs, contractSteps, libraryBuildSteps } from './compile-referenced-projects.ts'
@@ -177,8 +176,9 @@ async function main(): Promise<number> {
     return runAggregate(name, gates, workers(gates))
   }
 
-  const repositoryEnvironment = repositoryClientBuildEnvironment(root, process.env)
-  const clientEnvironment = resolveClientBuildEnvironment(repositoryEnvironment, profile ?? process.env[CLIENT_BUILD_PROFILE_SELECTOR])
+  const clientEnvironment = repositoryClientBuildProfileEnvironment(
+    root, process.env, profile ?? process.env[CLIENT_BUILD_PROFILE_SELECTOR],
+  )
   const environment = environmentOverlay(process.env, clientBuildProcessEnvironment(process.env, clientEnvironment))
   rmSync(resolve(root, CLIENT_BUILD_RECORD_PATH), { force: true })
   const gates = buildGates(root, scope, environment, serial)

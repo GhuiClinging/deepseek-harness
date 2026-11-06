@@ -45,6 +45,14 @@ Settings visibility and section selection live in the shell owner store. The she
 
 ### The General section
 
+A Desktop preload with `web` adds an icon-only action in `conversation.header.actions`, including before a Session exists. Its tooltip names the browser action; the interface displays no address. Selecting it asks Electron to open its current authenticated URL in the default browser. The action follows startup, restart, and shutdown, and does not expose authentication tokens to the renderer. App exit stops that Host; browser access is not a separate background service.
+
+Photographic brands expose `backgroundFolder`, `backgroundMinSeconds`, and `backgroundMaxSeconds` through the shared form. The editor accepts 1–1440 minutes with an ordered range; source defaults are 5–15 minutes. Each client rotates the Conversation and sidebar independently, rescans before each deadline, and preserves accepted pictures on failure. Manual selection rescans immediately; pause affects the current client. Fixed artwork and regional backgrounds use authenticated owner-only `/api/brand-appearance/*` routes. Only bounded regular PNG/JPEG/WebP files are served; global theme colors and standalone-page surfaces remain unchanged.
+
+Brand client builds display a local user icon or saved avatar and nickname in the Settings launcher. General Settings edits `localNickname` and `localAvatar` atomically through the shared Host form; connected desktop and browser clients observe the same accepted values. Nicknames have at most 64 characters. The picker accepts PNG, JPEG, and WebP files up to 2 MiB, crops them to a 128-pixel square, and stores a PNG data URL of at most 100,000 characters. External image URLs and SVG are rejected. Empty names use the localized local-user label, and missing or broken avatars use the built-in user icon. This display profile creates no remote account and grants no access.
+
+An immutable Desktop presentation snapshot with `updates: manual` omits upstream update-channel controls and does not subscribe to upstream update status. Browser and unselected Desktop installations retain their existing behavior.
+
 The current release version appears at the bottom of General Settings in Web and Desktop, using the build’s `DSH_CLIENT_VERSION` metadata and the active language. Partial builds without version metadata omit the row.
 
 The Coding Tools switch controls the shared `ui-settings.enabled` preference described by [ui-settings](../ui-settings/README.md#use-this-package). It is available in both Web and desktop, follows accepted changes immediately, and disables duplicate input while a write settles. A failed write displays localized retry guidance. On Desktop, a change made with this switch reports `code_work_view_toggle` with the new value through the optional [product analytics](../product-analytics/README.md) service, timestamped at the click. Only a write that changes a known value and leaves the preference at the requested value reports; requesting the current value, an unknown previous value, a failed write, and preference updates made elsewhere report nothing.
@@ -93,7 +101,7 @@ On a loopback page, the Client loads the provider's `hasDocument` capability thr
 
 ### Host half
 
-The Host half declares `welcomeNoticeVersion` as a volatile field of the `ui-settings-general` entry Config. The welcome step contributed by ui-settings-models reads and writes its `welcomeNoticeVersion` through the existing public settings boundary; the shell itself remains policy-free.
+The Host half declares `welcomeNoticeVersion`, `localNickname`, and `localAvatar` as volatile fields of the `ui-settings-general` entry Config. The welcome step contributed by ui-settings-models reads and writes its `welcomeNoticeVersion` through the existing public settings boundary; the shell itself remains policy-free.
 
 </details>
 

@@ -8,8 +8,23 @@ import { WELCOME_IPC, type WelcomeApi, type WelcomeNotice, type WelcomeSaveResul
 const prefix = '--dsh-welcome-locale='
 const locale = process.argv.find(argument => argument.startsWith(prefix))?.slice(prefix.length)
 if (locale === undefined) throw new Error('desktop welcome: missing window locale')
+const brandArgument = (field: string): string | undefined => {
+  const argument = `--dsh-welcome-brand-${field}=`
+  const value = process.argv.find(item => item.startsWith(argument))?.slice(argument.length)
+  return value === undefined ? undefined : decodeURIComponent(value)
+}
+const name = brandArgument('name')
+const wordmark = brandArgument('wordmark')
+const mark = brandArgument('mark')
+const greeting = brandArgument('greeting')
+if (name !== undefined && (wordmark === undefined || mark === undefined || greeting === undefined)) {
+  throw new Error('desktop welcome: incomplete brand presentation')
+}
 const api: WelcomeApi = {
-  ...resolveDesktopLocale(locale),
+  authenticationMode: process.argv.includes('--dsh-welcome-authentication=api-key') ? 'api-key' : 'account',
+  ...resolveDesktopLocale(locale, name),
+  ...(name === undefined || wordmark === undefined || mark === undefined || greeting === undefined ? {}
+    : { presentation: Object.freeze({ name, wordmark, mark, greeting }) }),
   analytics: async (eventName, attributes) => {
     if (await api.analyticsEnabled()) await ipcRenderer.invoke(WELCOME_IPC.analytics, eventName, attributes)
   },

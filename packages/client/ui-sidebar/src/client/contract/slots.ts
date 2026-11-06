@@ -194,6 +194,8 @@ export interface SidebarFooterActionOwnerProps {
  * factory). The renderer binds the panel metadata source to usePanels.
  */
 export type SidebarRootInjected = {
+  /** Plain deployment identity used only while the brand slots have no occupant. */
+  readonly brand?: { readonly mark: string; readonly wordmark: string; readonly logo?: string }
   /**
    * Start a New Session: with a workspace, reuse-or-create its blank session
    * and open it; without one, inherit the current Session Workspace, then the

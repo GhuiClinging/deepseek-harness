@@ -340,6 +340,12 @@ export function apply(ctx: Context, config: Config = Config({})): void {
     },
   }, ConversationRoot)
 
+  const runtimeBrand = (globalThis as typeof globalThis & {
+    dshDesktopBrand?: { readonly mark: string; readonly persona: { readonly greeting: string } }
+  }).dshDesktopBrand
+  const mark = runtimeBrand?.mark ?? process.env.DSH_CLIENT_BRAND_MARK
+  const greeting = runtimeBrand?.persona.greeting ?? process.env.DSH_CLIENT_GREETING
+  const brand = mark === undefined || greeting === undefined ? undefined : { mark, greeting }
   const registerConversationContent = () => slots.registerFactory({
     name: 'conversation.content',
     scope: 'session-maybe',
@@ -359,6 +365,7 @@ export function apply(ctx: Context, config: Config = Config({})): void {
       widthControls: { scope: 'root' },
     },
     inject: (sessionId: SessionId | undefined): ConversationInjected => ({
+      ...(brand === undefined ? {} : { brand }),
       hooks: {
         composerBlock: sessionId === undefined ? ABSENT_BLOCK : composerBlocks.storeFor(sessionId),
       },
@@ -433,6 +440,7 @@ export function apply(ctx: Context, config: Config = Config({})): void {
     name: 'conversation.header',
     children: {
       'conversation.header.leading': { kind: 'single', scope: 'root' },
+      'conversation.header.actions': { kind: 'list', scope: 'root' },
       'conversation.session.header': { kind: 'single', scope: 'session' },
     },
   }, ConversationHeader)

@@ -4,6 +4,7 @@ vi.mock('../src/web-document.ts', () => ({
 /** Welcome startup uses the Host before transitioning to the workspace. */
 
 import { afterEach, expect, it, vi } from 'vitest'
+import { join } from 'node:path'
 import type { BrowserWindowConstructorOptions } from 'electron'
 import type { DesktopLocale } from '../src/locale.ts'
 import type { AccountView } from '@deepseek-ai/dsh-deepseek-account/types'
@@ -11,6 +12,9 @@ import type { WelcomeOperations } from '../src/welcome-api.ts'
 import { DESKTOP_IPC } from '../src/ipc.ts'
 
 const state = vi.hoisted(() => ({
+  manifest: {} as object,
+  setPath: vi.fn(),
+  setName: vi.fn(),
   appListeners: new Map<string, (...args: unknown[]) => void>(),
   dialogLocale: undefined as (() => DesktopLocale) | undefined,
   beforeRead: vi.fn(async () => {}),
@@ -52,6 +56,8 @@ vi.mock('electron', () => ({
   clipboard: { writeText: state.copy },
   app: {
     isPackaged: false,
+    setPath: state.setPath,
+    setName: state.setName,
     name: 'Harness',
     requestSingleInstanceLock: () => true,
     setAsDefaultProtocolClient: vi.fn(),
@@ -145,7 +151,11 @@ vi.mock('../src/welcome-backend.ts', () => ({
 }))
 vi.mock('node:fs/promises', async importOriginal => ({
   ...await importOriginal<typeof import('node:fs/promises')>(),
-  readFile: vi.fn(async () => '{}'),
+  readFile: vi.fn(async () => JSON.stringify(state.manifest)),
+}))
+vi.mock('../src/brand-profile.ts', async importOriginal => ({
+  ...await importOriginal<typeof import('../src/brand-profile.ts')>(),
+  prepareDesktopBrandProfile: async (brand: { persona: object }) => ({ persona: brand.persona, patchPath: '/brand/desktop-brand.patch.json', personaPath: '/brand/persona.json' }),
 }))
 vi.mock('../src/update-dialog.ts', () => ({ DesktopUpdateDialog: class {
   constructor(_preload: string, locale: () => DesktopLocale) { state.dialogLocale = locale }
@@ -177,6 +187,7 @@ afterEach(() => {
 it.each([false, true])('starts welcome onboarding without carrying update focus into login or skip (Windows update=%s)', async (updated) => {
   vi.resetModules()
   vi.clearAllMocks()
+  state.manifest = {}
   state.preference = 'zh'
   state.hasApiKey = false
   state.operations = undefined
@@ -301,4 +312,36 @@ it.each([false, true])('starts welcome onboarding without carrying update focus 
   expect(state.showWorkspace).toHaveBeenCalledOnce()
   expect(state.focusWorkspace).toHaveBeenCalledOnce()
 
+})
+
+
+it('isolates selected identity before cache reads and skips native account streams and upstream CLI', async () => {
+  vi.resetModules()
+  vi.clearAllMocks()
+  const brand = { id: 'huigong', name: '辉总后宫智囊团', wordmark: '辉总 · 后宫智囊团', appId: 'com.guohui.huigong', protocol: 'huigong', storageNamespace: 'huigong', mark: '辉',
+    persona: { name: '彤答应', address: '主人', greeting: '欢迎回来，主人。', instructions: '角色指示', completion: '请过目' } }
+  state.manifest = { dshDesktopBrand: brand }
+  vi.stubEnv('DSH_CLIENT_VERSION', '1.2.3')
+  state.hasApiKey = false
+  state.operations = undefined
+  state.accountListener = undefined
+  vi.stubEnv('DSH_DESKTOP_PRIMARY_RUNTIME_DIR', '/runtime/primary-runtime')
+  vi.stubEnv('DSH_DESKTOP_OPEN_DEVTOOLS', '0')
+  vi.stubEnv('DSH_DESKTOP_MANDATORY_UPDATE_CONFIG', undefined)
+  vi.stubEnv('DSH_DESKTOP_UPDATE_JOURNAL_DIR', undefined)
+  vi.stubEnv('DSH_HOME', '/upstream-home')
+  await import('../src/main.ts')
+  await vi.waitFor(() => { expect(state.operations).toBeDefined() })
+  expect(state.setName).toHaveBeenCalledWith('辉总后宫智囊团')
+  expect(state.setPath).toHaveBeenCalledWith('userData', join('/development-appData', 'huigong'))
+  expect(process.env.DSH_HOME).toBe(join('/development-home', '.huigong'))
+  expect(state.accountListener).toBeUndefined()
+  const operations = (): WelcomeOperations | undefined => state.operations
+  expect(operations()?.authenticationMode).toBe('api-key')
+  await expect(state.operations!.startSignIn()).rejects.toThrow('unavailable')
+  expect(state.accountState).not.toHaveBeenCalled()
+  const templates = state.menu.mock.calls.flatMap(([template]) => template as Array<{ submenu?: Array<{ label?: string }> }>)
+  const menuItems = templates.flatMap(item => item.submenu ?? [])
+  expect(menuItems.some(item => item.label === state.welcomeLocale?.messages.cliCommandMenu)).toBe(false)
+  state.manifest = {}
 })

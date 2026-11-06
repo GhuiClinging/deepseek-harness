@@ -4,6 +4,7 @@ import { accessSync, constants, readFileSync, statSync } from 'node:fs'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseEnv } from 'node:util'
+import { resolveDesktopBrandEnvironment } from './desktop-brand.mjs'
 import { resolveDesktopAppId, resolveMacOSNotarizationEnvironment, resolveMacOSSigningEnvironment, resolveNpmRegistry } from './desktop-release-environment.mjs'
 import { resolveDesktopAutoUpdateConfig } from './desktop-auto-update-environment.mjs'
 import { createWindowsTokenSigner } from './windows-sign.mjs'
@@ -18,18 +19,20 @@ const APP_ROOT = fileURLToPath(new URL('..', import.meta.url))
 const SHARED_SETTING = /^(?:DSH_DESKTOP_(?:APP_ID|AUTO_UPDATE_ENV|NPM_REGISTRY|MANDATORY_UPDATE_(?:CONFIG|(?:TEST|PROD)_ORIGIN))|DOWNLOAD_TEST_RELEASE_ID|DOWNLOAD_PROD_EO_ZONE_ID|DOWNLOAD_(?:TEST|PROD)_(?:ORIGIN|COS_BUCKET|COS_SECRET_ID|COS_SECRET_KEY))$/u
 const WINDOWS_SETTING = /^DSH_DESKTOP_WINDOWS_(?:CER_FILE|SIGNTOOL|KEY_CONTAINER|TOKEN_PIN|SIGNATURE_CACHE_DIR|SIGNATURE_CACHE_CONCURRENCY|PACK_CONCURRENCY|COMPRESSION_LEVEL)$/u
 const MACOS_SETTING = /^(?:DSH_DESKTOP_MACOS_(?:SIGNING_IDENTITY|TEAM_ID|SIGNATURE_CACHE_DIR|PACK_CONCURRENCY|ZIP_COMPRESSION_LEVEL|DOWNLOAD_PROXY|NOTARIZATION_PROXY)|APPLE_(?:API_KEY|API_KEY_ID|API_ISSUER|ID|APP_SPECIFIC_PASSWORD|TEAM_ID|KEYCHAIN|KEYCHAIN_PROFILE)|CSC_(?:LINK|KEY_PASSWORD))$/u
-const AMBIENT_RELEASE_SETTING = /^(?:DSH_DESKTOP_(?:APP_ID|AUTO_UPDATE_ENV|MANDATORY_UPDATE_.*|WINDOWS_.*|MACOS_.*)|APPLE_.*|(?:WIN_)?CSC_.*|DOWNLOAD_(?:TEST|PROD)_.*)$/iu
+const AMBIENT_RELEASE_SETTING = /^(?:DSH_DESKTOP_(?:APP_ID|BRAND|AUTO_UPDATE_ENV|MANDATORY_UPDATE_.*|WINDOWS_.*|MACOS_.*)|APPLE_.*|(?:WIN_)?CSC_.*|DOWNLOAD_(?:TEST|PROD)_.*)$/iu
 const FILE_SETTINGS = ['DSH_DESKTOP_WINDOWS_CER_FILE', 'DSH_DESKTOP_WINDOWS_SIGNTOOL', 'APPLE_API_KEY', 'APPLE_KEYCHAIN', 'CSC_LINK']
 
 /**
  * Select local macOS test defaults without reading dotenv files or inheriting release settings.
  * @param {NodeJS.ProcessEnv} environment Parent environment, retained for build tools and networking.
- * @returns {NodeJS.ProcessEnv} Unsigned build environment with the standard application identifier and no update policy.
+ * @param {import('./desktop-brand.mjs').DesktopBrandSelection | undefined} selection Explicitly loaded brand; ambient brand carriers are discarded.
+ * @returns {NodeJS.ProcessEnv} Unsigned build environment with the selected or standard application identifier and no update policy.
  */
-export function localMacOSPackageEnvironment(environment = process.env) {
+export function localMacOSPackageEnvironment(environment = process.env, selection = undefined) {
   return {
     ...Object.fromEntries(Object.entries(environment).filter(([name]) => !AMBIENT_RELEASE_SETTING.test(name))),
-    DSH_DESKTOP_APP_ID: 'com.deepseek.harness',
+    DSH_DESKTOP_APP_ID: selection?.brand.appId ?? 'com.deepseek.harness',
+    ...(selection === undefined ? {} : { DSH_DESKTOP_BRAND: JSON.stringify(selection) }),
     DSH_DESKTOP_UNSIGNED: '1',
   }
 }
@@ -154,6 +157,11 @@ function requireReadableFile(environment, name) {
  */
 export function validateDesktopPackageEnvironment(environment, target, options = {}) {
   resolveDesktopTargetBuildPaths(environment, target.platform, target.arch)
+  const brand = resolveDesktopBrandEnvironment(environment)?.brand
+  if (brand !== undefined) {
+    if (target.platform !== 'darwin' || !options.unsigned) throw new Error('desktop brand: use --unsigned on macOS; signed and Windows brand packages are not supported')
+    if (environment.DSH_DESKTOP_APP_ID !== brand.appId) throw new Error('desktop brand: application ID must match selected brand appId')
+  }
   resolveDesktopAppId(environment)
   resolveNpmRegistry(environment)
   if (target.platform !== 'darwin' || !options.unsigned) resolveDesktopPolicyEnvironment(environment)

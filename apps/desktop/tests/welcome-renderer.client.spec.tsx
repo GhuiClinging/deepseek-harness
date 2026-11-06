@@ -6,7 +6,7 @@ import { Welcome } from '../src/client/WelcomePage.tsx'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { resolveDesktopLocale } from '../src/locale.ts'
 import type { AccountView } from '@deepseek-ai/dsh-deepseek-account/types'
-import type { WelcomeSaveResult, WelcomeNotice } from '../src/welcome-api.ts'
+import type { WelcomeApi, WelcomeSaveResult, WelcomeNotice } from '../src/welcome-api.ts'
 
 const html = readFileSync(join(import.meta.dirname, '../renderer/welcome.html'), 'utf8')
 afterEach(cleanup)
@@ -48,6 +48,26 @@ function mount(language = 'zh-CN', takeNotice = vi.fn<() => Promise<WelcomeNotic
 }
 
 describe('desktop welcome presentation', () => {
+  it('starts API-key-only onboarding without account presentation and renders the current brand greeting', async () => {
+    const view = mount()
+    view.unmount()
+    const api: WelcomeApi = { ...view.api, authenticationMode: 'api-key',
+      presentation: { name: '辉总后宫智囊团', wordmark: '辉总 · 后宫智囊团', mark: '辉', greeting: '主人，今天也请交给我。' } }
+    render(<Welcome api={api} />)
+    expect(document.querySelector('#key-form')?.hasAttribute('hidden')).toBe(false)
+    expect(screen.getByText('辉总 · 后宫智囊团')).toBeTruthy()
+    const greeting = screen.getByText('主人，今天也请交给我。')
+    expect(screen.getByText('辉总 · 后宫智囊团').closest('header')?.contains(greeting)).toBe(true)
+    expect(document.querySelector('#sign-in')).toBeNull()
+    expect(document.querySelector('#back-to-login')).toBeNull()
+    expect(document.querySelector('#auth-page')).toBeNull()
+    expect(document.querySelector('img[src="assets/welcome-brand.svg"]')).toBeNull()
+    expect(view.api.onAccountState).toHaveBeenCalledTimes(1)
+    fireEvent.change(document.querySelector('input')!, { target: { value: 'sk-brand' } })
+    fireEvent.submit(document.querySelector('form')!)
+    await vi.waitFor(() => { expect(view.api.saveApiKey).toHaveBeenCalledWith('sk-brand') })
+  })
+
   it.each(['zh-CN', 'en'])('renders the %s entry and API-key step', async (language) => {
     const view = mount(language)
     expect(view.document.documentElement.lang).toBe(language)

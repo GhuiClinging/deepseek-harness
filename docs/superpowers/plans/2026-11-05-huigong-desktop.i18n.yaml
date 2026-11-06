@@ -1,0 +1,28 @@
+# Bilingual-pair consistency record for 2026-11-05-huigong-desktop.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/superpowers/plans/2026-11-05-huigong-desktop.md
+/huigong-desktop-implementation-plan:
+  en: 3a51b866d8fceac4
+  zh: b8251edb0cc91bcb
+/huigong-desktop-implementation-plan/global-constraints:
+  en: dbd8a1d9096e205f
+  zh: c08b44e15f5691aa
+/huigong-desktop-implementation-plan/review-focus:
+  en: e26bc50e8164b70d
+  zh: 7b5e5e4631102626
+/huigong-desktop-implementation-plan/task-1-brand-descriptor-and-packaging:
+  en: b517b29e9b6c14b6
+  zh: 0a8c368551099ad7
+/huigong-desktop-implementation-plan/task-2-runtime-isolation-and-editable-persona:
+  en: d136f0d026563ed9
+  zh: 81d8fbb04d9ef126
+/huigong-desktop-implementation-plan/task-3-native-and-browser-presentation:
+  en: aa0255118f482179
+  zh: 4e470a6e0561fb53
+/huigong-desktop-implementation-plan/task-4-integration-installer-and-acceptance:
+  en: 09a90012eb4a27c3
+  zh: e61d7bbe5a13ba7f
+/huigong-desktop-implementation-plan/execution-decisions:
+  en: 0af169cf1cf5ba40
+  zh: 73511839696a24ea

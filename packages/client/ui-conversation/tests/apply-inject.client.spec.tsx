@@ -161,6 +161,26 @@ async function bench(renderQuote = false) {
 }
 
 describe('Conversation inject API', () => {
+  it('injects the current runtime greeting ahead of build defaults and retains browser and upstream fallbacks', async () => {
+    onTestFinished(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs() })
+    vi.stubEnv('DSH_CLIENT_BRAND_MARK', 'Build')
+    vi.stubEnv('DSH_CLIENT_GREETING', 'Build greeting')
+    vi.stubGlobal('dshDesktopBrand', Object.freeze({ mark: '辉', persona: Object.freeze({ greeting: '主人，今天也请交给我。' }) }))
+    const native = await bench()
+    onTestFinished(() => native.runtime.dispose())
+    expect(native.residentApi(undefined).brand).toEqual({ mark: '辉', greeting: '主人，今天也请交给我。' })
+    cleanup()
+    vi.stubGlobal('dshDesktopBrand', undefined)
+    const browser = await bench()
+    onTestFinished(() => browser.runtime.dispose())
+    expect(browser.residentApi(undefined).brand).toEqual({ mark: 'Build', greeting: 'Build greeting' })
+    cleanup()
+    vi.unstubAllEnvs()
+    const upstream = await bench()
+    onTestFinished(() => upstream.runtime.dispose())
+    expect(upstream.residentApi(undefined).brand).toBeUndefined()
+  })
+
   it('renders literal quote text through the actual Factory and keyed node registration', async () => {
     const b = await bench(true)
     onTestFinished(() => b.runtime.dispose())

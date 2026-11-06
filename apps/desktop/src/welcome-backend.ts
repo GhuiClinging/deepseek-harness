@@ -16,7 +16,7 @@ export interface WelcomeState {
 export interface DesktopWelcomeBackend {
   /** @returns the current Host policy; every read observes live configuration. */
   analyticsEnabled(): Promise<boolean>
-  readonly account: DesktopAccountBackend
+  readonly account: DesktopAccountBackend | undefined
   /** @param event - desktop-owned fields. @returns after local Host intake. */
   report(event: ProductEvent): Promise<void>
   /** @returns Configured-key presence and the shared language preference, without credential values. */
@@ -39,12 +39,14 @@ function record(value: unknown): value is Record<string, unknown> {
  * @param hostUrl - URL of the running Desktop Host; only its origin is used.
  * @param cookie - Cookie header returned by `authenticateWebHost` for this Host.
  * @param send - HTTP client for Host requests.
+ * @param authenticationMode - brand API-key mode omits all account and analytics operations.
  * @returns metadata reads and write-only credential operations over standard RPC.
  */
 export function connectDesktopWelcome(
   hostUrl: string,
   cookie: string,
   send: (input: string, init?: RequestInit) => Promise<Response> = fetch,
+  authenticationMode: 'account' | 'api-key' = 'account',
 ): DesktopWelcomeBackend {
   const origin = new URL(hostUrl).origin
   const invoke = async (
@@ -66,7 +68,7 @@ export function connectDesktopWelcome(
     }
     return envelope.result.value
   }
-  const account = desktopAccountBackend(origin, invoke, cookie)
+  const account = authenticationMode === 'api-key' ? undefined : desktopAccountBackend(origin, invoke, cookie)
   const settingsAndReference = async () => {
     const settings = await invoke({ namespace: 'settings', method: 'describe', args: {} })
     if (!record(settings) || !Array.isArray(settings.namespaces)) throw new Error('desktop welcome: missing settings namespaces')
@@ -112,7 +114,7 @@ export function connectDesktopWelcome(
     }
     if (ref !== undefined && !record(states[ref])) throw new Error('desktop welcome: missing credential metadata')
     return {
-      loggedIn: (await account.state()).status === 'credential-stored',
+      loggedIn: account === undefined ? false : (await account.state()).status === 'credential-stored',
       hasApiKey: Object.values(states).some(value => record(value) && value.configured === true),
       writable: ref !== undefined && record(states[ref]) && states[ref].writable === true,
       localePreference: localePreference(namespaces),
@@ -122,11 +124,12 @@ export function connectDesktopWelcome(
     account,
     read,
     async analyticsEnabled() {
+      if (authenticationMode === 'api-key') return false
       const enabled = await invoke({ namespace: 'productAnalytics', method: 'enabled', args: {} }, AbortSignal.timeout(1000))
       if (typeof enabled !== 'boolean') throw new Error('desktop analytics: invalid collection policy')
       return enabled
     },
-    async report(event) { await invoke({ namespace: 'productAnalytics', method: 'report', args: { event } }, AbortSignal.timeout(1000)) },
+    async report(event) { if (authenticationMode === 'api-key') return; await invoke({ namespace: 'productAnalytics', method: 'report', args: { event } }, AbortSignal.timeout(1000)) },
     async readLocalePreference() {
       const settings = await invoke({ namespace: 'settings', method: 'describe', args: {} })
       if (!record(settings) || !Array.isArray(settings.namespaces)) throw new Error('desktop welcome: missing settings namespaces')

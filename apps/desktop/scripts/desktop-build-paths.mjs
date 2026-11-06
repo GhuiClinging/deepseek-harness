@@ -1,6 +1,7 @@
 /** Resolve target-owned Desktop outputs and shared package caches. */
 
 import { isAbsolute, join, resolve } from 'node:path'
+import { resolveDesktopBrandEnvironment } from './desktop-brand.mjs'
 
 const APP_ROOT = resolve(import.meta.dirname, '..')
 const BUILD_ROOT = join(APP_ROOT, '.desktop-build')
@@ -36,7 +37,7 @@ function assertSupportedTarget(target) {
 }
 
 /**
- * Return the mutable preparation and artifact directories owned by one release target.
+ * Return mutable preparation and artifact directories owned by one brand and release target.
  * @param {'mac-arm64' | 'mac-x64' | 'win-x64'} target - Supported Desktop target name.
  * @param {NodeJS.ProcessEnv} environment - Packaging environment with an optional absolute cache directory.
  * @returns {{ root: string, artifacts: string, unsignedArtifacts: string, unnotarizedArtifacts: string, runtime: string, packageSet: string, dsh: string, dshPnpm: string, electron: string, packedDsh: string, packedVendor: string, packedLandlock: string, downloads: string, pnpmStore: string }} Target paths plus shared download and package caches.
@@ -47,7 +48,8 @@ export function desktopTargetBuildPaths(target, environment = process.env) {
   if (!cacheRoot.trim() || !isAbsolute(cacheRoot) || cacheRoot.includes('\0')) {
     throw new Error('desktop package: DSH_DESKTOP_PACKAGE_CACHE_DIR must be a nonempty absolute directory')
   }
-  const root = join(BUILD_ROOT, 'targets', target)
+  const brand = resolveDesktopBrandEnvironment(environment)?.brand
+  const root = brand === undefined ? join(BUILD_ROOT, 'targets', target) : join(BUILD_ROOT, 'brands', brand.id, 'targets', target)
   const packed = join(root, 'packed')
   return {
     root,

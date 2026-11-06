@@ -1,5 +1,6 @@
 /** Launch the Desktop profile through the Web application and report its URL to Electron. */
 
+import { desktopBrandProfileOptions } from './brand-profile.ts'
 import { delimiter, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type { PluginOperationRunId } from '@deepseek-ai/dsh-plugin-manager/diagnostic'
@@ -28,11 +29,14 @@ async function main(): Promise<void> {
   const installAnchor = join(runtimeDir, 'node_modules', '@deepseek-ai', 'dsh', 'package.json')
   const profile = loadProfileDirectory('dsh', projectDir, installAnchor)
   reportSkippedBundles('dsh', profile)
+  const brandProfile = desktopBrandProfileOptions(process.env)
+  if (brandProfile.personaPrefix === undefined) delete process.env.DSH_DESKTOP_PERSONA_PREFIX
+  else process.env.DSH_DESKTOP_PERSONA_PREFIX = brandProfile.personaPrefix
   const application = runProfile({
     environment: loadLayeredEnv('dsh'),
     profile: 'desktop',
     resolvedProfile: { profile, installAnchor },
-    patchFiles: [],
+    patchFiles: brandProfile.patchFiles,
     args: ['--no-open', '--host', '127.0.0.1', '--port', '0'],
     ...(process.argv[5] === undefined ? {} : {
       packageManager: {
@@ -136,7 +140,7 @@ async function main(): Promise<void> {
     source: process.argv[4] ?? join(runtimeDir, '..', 'runtime', 'primary-runtime'),
     root: join(resolveDshHome(), 'dsh-runtimes', 'dsh-primary-runtime'),
   })
-  installPlatformSessionPublisher(ctx, (session) => {
+  if (brandProfile.personaPrefix === undefined) installPlatformSessionPublisher(ctx, (session) => {
     if (process.connected) process.send?.({ type: 'platform-session', session })
   })
   const url = ctx.connection.authenticatedUrl(`${ctx.webServer.protocol}//127.0.0.1:${String(ctx.webServer.port)}`)

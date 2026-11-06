@@ -10,6 +10,8 @@ English | [中文](README.zh.md)
 
 Desktop runs the Harness workspace in a native application. This reference covers application behavior, development and integration; the packaging, Windows signing and publication guides own build and release operations.
 
+Selected [brand installations](brands/README.md#installed-runtime) adapt native product labels without changing factual provider names. Welcome opens directly on the API-key page, omits account navigation, and shows the selected wordmark, text mark and current role greeting through its isolated preload. Unselected installations retain the account welcome flow.
+
 ## Table of Contents
 
 - [Application overview](#application-overview)

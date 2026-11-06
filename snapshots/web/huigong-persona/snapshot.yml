@@ -1,0 +1,8 @@
+version: 1
+scenario: huigong-persona
+profile: web
+composition: web-huigong-persona
+recording: authored
+header:
+  class: web-huigong-persona
+  pin: true

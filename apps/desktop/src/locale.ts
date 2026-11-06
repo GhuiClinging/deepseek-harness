@@ -1521,30 +1521,46 @@ export interface DesktopLocale {
   readonly messages: DesktopMessages
 }
 
-/** Resolve Electron's locale to one shipped Desktop dictionary. */
-export function resolveDesktopLocale(locale: string): DesktopLocale {
+/**
+ * Resolve Electron's locale without changing the shared dictionaries or factual provider labels.
+ * @param locale - operating-system language tag.
+ * @param applicationName - selected public product name; omitted retains upstream labels.
+ * @returns locale-owned product labels with the optional installation identity.
+ */
+export function resolveDesktopLocale(locale: string, applicationName?: string): DesktopLocale {
+  const localize = (messages: DesktopMessages): DesktopMessages => applicationName === undefined ? messages : {
+    ...messages,
+    welcomeKeyDescription: messages.welcomeKeyDescription.replaceAll('Harness', applicationName),
+    ...Object.fromEntries(([
+      'aboutMenu', 'aboutProduct', 'hideApplication', 'quitApplication', 'openApplication', 'quitTitle',
+      'startupFailed', 'welcomeTitle', 'welcomeBrand', 'welcomeTaglineBrand', 'updateTitle',
+    ] as const).map(key => [key, messages[key].replaceAll('DeepSeek Harness', applicationName)])),
+  }
   const primary = locale.toLowerCase().split('-')[0]
   if (primary !== undefined && Object.hasOwn(dictionaries, primary)) {
     const id = primary as keyof typeof dictionaries
-    return { id: id === 'zh' ? 'zh-CN' : id, messages: dictionaries[id] }
+    return { id: id === 'zh' ? 'zh-CN' : id, messages: localize(dictionaries[id]) }
   }
-  return { id: 'en', messages: en }
+  return { id: 'en', messages: localize(en) }
 }
 
 /**
  * Choose a built-in dictionary from the shared preference, then ordered OS languages.
  * @param preference - explicit locale.preference, or null when no language was selected.
  * @param languages - operating-system languages in preference order.
+ * @param applicationName - selected public product name, if any.
  * @returns the supported dictionary, falling back to English.
  */
-export function resolveDesktopStartupLocale(preference: string | null, languages: readonly string[]): DesktopLocale {
+export function resolveDesktopStartupLocale(
+  preference: string | null, languages: readonly string[], applicationName?: string,
+): DesktopLocale {
   const selected = preference?.toLowerCase()
-  if (selected !== undefined && Object.hasOwn(dictionaries, selected)) return resolveDesktopLocale(selected)
+  if (selected !== undefined && Object.hasOwn(dictionaries, selected)) return resolveDesktopLocale(selected, applicationName)
   for (const language of languages) {
     const primary = language.toLowerCase().split('-')[0]
-    if (primary !== undefined && Object.hasOwn(dictionaries, primary)) return resolveDesktopLocale(primary)
+    if (primary !== undefined && Object.hasOwn(dictionaries, primary)) return resolveDesktopLocale(primary, applicationName)
   }
-  return resolveDesktopLocale('en')
+  return resolveDesktopLocale('en', applicationName)
 }
 
 /** Replace named placeholders in one locale-owned message. */

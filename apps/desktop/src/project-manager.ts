@@ -22,7 +22,8 @@ import {
 import type { DesktopPaths } from './paths.ts'
 import type { DesktopRelease } from './release.ts'
 import { readDesktopRuntime } from './runtime-tree.ts'
-import { initProfile, removeLinkProjections, sanitizeProfile } from '@deepseek-ai/dsh-app-boot'
+import { initProfile, readProfileManifest, writeProfileBundles, removeLinkProjections, sanitizeProfile } from '@deepseek-ai/dsh-app-boot'
+import type { DesktopBundledPlugin } from './brand.ts'
 import { PROFILE_TEMPLATES, type ProfileTemplate } from '@deepseek-ai/dsh-official-bundles'
 
 const PROJECT_NAME = '@deepseek-ai/dsh-desktop-runtime'
@@ -61,10 +62,12 @@ export class DesktopProjectManager {
   /**
    * @param paths - Electron-owned package state and reserved desktop profile paths.
    * @param runtime - location of the bundled application runtime.
+   * @param bundledPlugins - exact third-party bundles carried by this brand.
    */
   constructor(
     readonly paths: DesktopPaths,
     readonly runtime: { readonly dsh: string },
+    private readonly bundledPlugins: readonly DesktopBundledPlugin[] = [],
   ) {}
 
   /**
@@ -84,7 +87,7 @@ export class DesktopProjectManager {
       // Validation only: an unreadable or mismatched runtime descriptor stops preparation before the Host starts.
       readDesktopRuntime(this.runtime.dsh)
       migrateProfileSettings(this.paths.profile)
-      createPluginProfile(this.paths.profile)
+      createPluginProfile(this.paths.profile, this.bundledPlugins.map(plugin => plugin.name))
       removeLinkProjections(this.paths.profile)
     })
   }
@@ -129,16 +132,25 @@ export class DesktopProjectManager {
   }
 }
 
-/** Create build-only project metadata for materializing the signed runtime. */
-export function createRuntimeProjectMetadata(projectDir: string, release: DesktopRelease): void {
+/**
+ * Create build-only project metadata for materializing the complete runtime.
+ * @param projectDir - build staging directory.
+ * @param release - exact core release.
+ * @param bundledPlugins - validated exact third-party packages.
+ */
+export function createRuntimeProjectMetadata(
+  projectDir: string, release: DesktopRelease, bundledPlugins: readonly DesktopBundledPlugin[] = [],
+): void {
   mkdirSync(projectDir, { recursive: true, mode: 0o700 })
   const packageSet = verifyDesktopCorePackageSet(projectDir, release.version)
   const manifest = {
     name: PROJECT_NAME,
     private: true,
     version: '0.0.0',
-    dependencies: desktopCorePackageOverrides(packageSet),
-    dsh: { profile: { bundles: [...WEB_PROFILE.bundles] } },
+    dependencies: {
+      ...desktopCorePackageOverrides(packageSet), ...Object.fromEntries(bundledPlugins.map(plugin => [plugin.name, plugin.version])),
+    },
+    dsh: { profile: { bundles: [...WEB_PROFILE.bundles, ...bundledPlugins.map(plugin => plugin.name)] } },
   }
   writeJson(join(projectDir, 'package.json'), manifest)
   writeFileSync(
@@ -169,7 +181,28 @@ export function createDevelopmentProjectMetadata(projectDir: string, release: De
   writeFileSync(join(projectDir, 'pnpm-workspace.yaml'), workspaceFile(), { mode: 0o600 })
 }
 
-/** Create the first external plugin profile without running a package manager. */
-export function createPluginProfile(projectDir: string): void {
+/**
+ * Initialize a profile and adopt each packaged bundle once without running a package manager.
+ * @param projectDir - locked profile directory owned by Desktop.
+ * @param bundledPlugins - installed bundle names; prior disabling choices remain effective.
+ */
+export function createPluginProfile(projectDir: string, bundledPlugins: readonly string[] = []): void {
   initProfile(projectDir, WEB_PROFILE.bundles)
+  if (bundledPlugins.length === 0) return
+  const historyPath = join(projectDir, 'desktop-bundled-plugins.json')
+  let initialized: string[] = []
+  if (existsSync(historyPath)) {
+    const value: unknown = JSON.parse(readFileSync(historyPath, 'utf8'))
+    if (!Array.isArray(value) || !value.every((name: unknown): name is string => typeof name === 'string')) {
+      throw new Error(`desktop plugins: invalid activation history at ${historyPath}`)
+    }
+    initialized = value
+  }
+  const added = bundledPlugins.filter(name => !initialized.includes(name))
+  if (added.length === 0) return
+  const manifest = readProfileManifest('desktop plugins', projectDir)
+  const previous = manifest.dsh?.profile?.bundles ?? []
+  const bundles = [...new Set([...previous, ...added])]
+  if (bundles.length !== previous.length) writeProfileBundles(projectDir, manifest, bundles)
+  writeJson(historyPath, [...new Set([...initialized, ...added])])
 }

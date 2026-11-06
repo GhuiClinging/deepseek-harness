@@ -1,5 +1,29 @@
 /** Type-only Electron update declarations shared by the settings UI and Desktop compatibility checks. */
 
+/** Local display data; it neither signs in nor grants access to a Host. */
+export interface LocalProfile {
+  readonly localNickname: string
+  readonly localAvatar: string
+}
+
+/** Public browser access status; authentication data stays in Electron. */
+export type DesktopWebState =
+  | { readonly phase: 'starting' | 'unavailable' }
+  | { readonly phase: 'ready'; readonly address: string }
+
+/** Explicit outcome of asking the operating system to open the current Host. */
+export type DesktopWebOpenResult = 'opened' | 'unavailable' | 'failed'
+
+/** Optional isolated preload API for the current desktop-owned Host. */
+export interface DesktopWebBridge {
+  /** @returns The current token-free address and lifecycle status. */
+  status(): Promise<DesktopWebState>
+  /** @returns Browser launch outcome for the current Host; callers cannot provide a URL. */
+  open(): Promise<DesktopWebOpenResult>
+  /** @param listener - Receives current Host transitions. @returns Removes this document's subscription. */
+  subscribe(listener: (state: DesktopWebState) => void): () => void
+}
+
 /** Classified failure copy selected by the Web locale without exposing raw updater diagnostics. */
 export type DesktopUpdateFailureKind =
   | 'configuration'
@@ -71,4 +95,16 @@ export interface DesktopChannelBridge {
    * @returns Removes this window's subscription.
    */
   subscribe(listener: (state: DesktopChannelState) => void): () => void
+}
+/** Accepted local photograph settings shared by every client of one Host. */
+export interface AppearancePreferences {
+  readonly backgroundFolder: string
+  readonly backgroundMinSeconds: number
+  readonly backgroundMaxSeconds: number
+}
+
+/** Authenticated browser-safe image references; filesystem paths stay in the Host. */
+export interface AppearanceCatalog {
+  readonly images: readonly string[]
+  readonly unavailable: boolean
 }

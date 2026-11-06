@@ -45,6 +45,14 @@ kind: "package-reference"
 
 ### 「通用」分区
 
+桌面 preload 提供 `web` 时，在 `conversation.header.actions` 显示纯图标入口，未选择 Session 时同样可用。悬停提示“跳转网页版”，界面不显示网址。点击后请 Electron 使用当前认证链接打开默认浏览器。入口随启动、重启和停止更新，不向渲染进程暴露认证 Token。退出 App 会停止该 Host；网页版不是独立后台服务。
+
+照片品牌通过共享表单提供 `backgroundFolder`、`backgroundMinSeconds` 和 `backgroundMaxSeconds`。编辑器接受顺序有效的 1–1440 分钟范围，源码默认值为 5–15 分钟。各客户端分别轮换 Conversation 和侧栏，每个期限前重新扫描目录，失败时保留已接受的图片；手动换图立即重扫，暂停仅影响当前客户端。固定图片和区域背景通过经过认证且仅限拥有者的 `/api/brand-appearance/*` 路由提供，只接受有大小限制的普通 PNG/JPEG/WebP 文件；全局主题颜色和独立页面底色保持原样。
+
+品牌客户端在设置入口显示本机用户图标或已保存头像与昵称。通用设置通过共享 Host 表单原子编辑 `localNickname` 和 `localAvatar`；连接该 Host 的桌面与网页客户端观察同一份已接受数据。昵称最多 64 个字符。选择器接受不超过 2 MiB 的 PNG、JPEG 和 WebP 文件，裁剪为 128 像素正方形，存储不超过 100,000 字符的 PNG data URL。外部图片 URL 与 SVG 会被拒绝。空昵称使用本地化的本机用户文案，缺失或损坏的头像使用内置用户图标。该展示资料不创建远程账号，也不授予访问权限。
+
+不可变的桌面展示快照包含 `updates: manual` 时，不显示上游更新通道控件，也不订阅上游更新状态。浏览器和未选择品牌的桌面安装保留现有行为。
+
 Web 与桌面端的通用设置底部显示当前发布版本，使用构建注入的 `DSH_CLIENT_VERSION` 元数据和当前语言。缺少版本元数据的局部构建不显示该行。
 
 代码工作工具开关控制 [ui-settings](../ui-settings/README.zh.md#use-this-package) 定义的共享偏好 `ui-settings.enabled`。Web 和桌面端均提供此开关，立即跟随已接受的变更，并在写入完成前禁用重复输入。写入失败时显示本地化的重试提示。在桌面端，通过此开关做出的变更会经可选的[产品埋点](../product-analytics/README.zh.md)服务报告携带新值的 `code_work_view_toggle`，时间戳取点击时刻。只有改变已知值、且写入后偏好等于所请求值的写入才会报告；请求当前值、原值未知、写入失败以及在其他位置修改偏好均不报告。
@@ -93,7 +101,7 @@ Web 与桌面端的通用设置底部显示当前发布版本，使用构建注�
 
 ### 宿主端
 
-宿主端在 `ui-settings-general` 条目的 Config 中把 `welcomeNoticeVersion` 声明为 volatile 字段。`ui-settings-models` 提供的欢迎步骤通过既有公开 settings 边界读写其中的 `welcomeNoticeVersion`；外壳本身仍不持有产品策略。
+宿主端在 `ui-settings-general` 条目的 Config 中把 `welcomeNoticeVersion`、`localNickname` 和 `localAvatar` 声明为 volatile 字段。`ui-settings-models` 提供的欢迎步骤通过既有公开 settings 边界读写其中的 `welcomeNoticeVersion`；外壳本身仍不持有产品策略。
 
 </details>
 

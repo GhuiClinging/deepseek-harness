@@ -68,6 +68,8 @@ The existing semantic `DraftSnapshot` retains quote text and clipboard-coordinat
 <a id="shell-and-standard-props"></a>
 ## Shell and standard props
 
+The blank-session hero receives optional plain `brand.mark/greeting` props from its `conversation.content` registration owner. That owner reads the immutable Desktop presentation snapshot first, then `DSH_CLIENT_BRAND_MARK` and `DSH_CLIENT_GREETING` for browser-build defaults. The current runtime greeting takes precedence over packaged defaults after application restart. The existing brand-mark slot retains priority; the configured fallback uses the text mark and greeting without the preview badge. With no brand values, the localized headline, fish and preview badge remain unchanged.
+
 Below 768px, Web view tabs align with the header's 20px left inset. Desktop and wider Web windows retain the additional 8px tab inset.
 
 The shared image slot props keep display choices separate from durable references: `thumbnail` requests a contained attachment-list thumbnail, while `compact` requests a cropped gallery tile. An optional per-image `label` supplies the accessible display name; loading and cache identity still use the original attachment reference. `MessageImagesContentInput` adds optional complete `MessageImageLabels` for the root-scoped `conversation.images.content` Factory. Message, tool, and Factory inputs carry the view's authorized `loadImage` callback explicitly; loading and URL caching remain with the resource owner. [ui-attachment](../ui-attachment/README.md) provides this Factory and owns rendering and the lightbox.
@@ -213,3 +215,5 @@ None; Conversation assembly and browser input state do not alter provider-side p
 None.
 
 </details>
+
+The resident header also declares the root-scoped `conversation.header.actions` list for controls available without a Session. It places these controls after Session utilities in the first row.

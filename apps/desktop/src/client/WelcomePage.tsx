@@ -15,11 +15,13 @@ type Page = 'entry' | 'key' | 'account'
  * @returns welcome pages with fixed bottom actions.
  */
 export function Welcome({ api }: { api: WelcomeApi }) {
-  const { messages: m } = api
+  const { messages: m, presentation } = api
+  const accountEnabled = api.authenticationMode !== 'api-key'
+  const initialPage: Page = accountEnabled ? 'entry' : 'key'
   const [expiryNotice, setExpiryNotice] = useState(false)
-  const [page, setPage] = useState<Page>('entry')
-  const pageRef = useRef<Page>('entry')
-  const visiblePage = useRef<Page>('entry')
+  const [page, setPage] = useState<Page>(initialPage)
+  const pageRef = useRef<Page>(initialPage)
+  const visiblePage = useRef<Page>(initialPage)
   const [attempt, setAttempt] = useState<AccountView['attempt']>(null)
   const attemptRef = useRef<AccountView['attempt']>(null)
   const [starting, setStarting] = useState(false)
@@ -60,6 +62,7 @@ export function Welcome({ api }: { api: WelcomeApi }) {
         // A closed Welcome IPC channel must not interrupt the sign-in page.
       })
     }
+    if (!accountEnabled) return () => { mounted.current = false }
     takeNotice()
     const stop = api.onAccountState((state) => {
       revision.current++
@@ -67,7 +70,7 @@ export function Welcome({ api }: { api: WelcomeApi }) {
       showAccount(state)
     })
     return () => { mounted.current = false; stop() }
-  }, [api, m.welcomeTitle])
+  }, [api, m.welcomeTitle, accountEnabled])
 
   useEffect(() => {
     if (page === 'entry' && visiblePage.current !== 'entry') void api.analytics?.('auth_page_view', {})
@@ -174,8 +177,13 @@ export function Welcome({ api }: { api: WelcomeApi }) {
   return <>
     {expiryNotice && <Toast text={m.welcomeSessionExpired} onDone={() => { setExpiryNotice(false) }} />}
     <div className="titlebar" aria-hidden="true" />
-    <main className="welcome" aria-labelledby={heading}>
-      <img className="brand" src="assets/welcome-brand.svg" alt={m.welcomeBrand} width="472" height="40" />
+    <main className={presentation === undefined ? 'welcome' : 'welcome welcome-branded'} aria-labelledby={heading}>
+      {presentation === undefined
+        ? <img className="brand" src="assets/welcome-brand.svg" alt={m.welcomeBrand} width="472" height="40" />
+        : <header className="brand-header">
+          <div className="brand brand-text"><span aria-hidden="true">{presentation.mark}</span><span>{presentation.wordmark}</span></div>
+          <p className="brand-greeting">{presentation.greeting}</p>
+        </header>}
       <div id="tagline" className="tagline" hidden={page !== 'entry'}>
         <h1 id="welcome-heading"><span>{m.welcomeTaglineBefore}</span><em>{m.welcomeTaglineBrand}</em><span>{m.welcomeTaglineAfter}</span></h1>
         <p id="welcome-description">{m.welcomeDescription}</p>
@@ -190,7 +198,7 @@ export function Welcome({ api }: { api: WelcomeApi }) {
           <p id="key-error" className="key-error" role="alert" hidden={error === ''}>{error}</p>
         </div>
       </form>
-      <section id="auth-page" className={`key-heading ${waiting ? 'auth-waiting' : phase === 'expired' ? 'auth-expired' : ''}`}
+      {accountEnabled && <><section id="auth-page" className={`key-heading ${waiting ? 'auth-waiting' : phase === 'expired' ? 'auth-expired' : ''}`}
         hidden={page !== 'account'} aria-live="polite">
         <h1 id="auth-status">{title}</h1>
         <p id="auth-description" hidden={!waiting && phase !== 'expired'}>{waiting ? m.welcomeAuthWaitingDescription : m.welcomeAuthExpiredDescription}</p>
@@ -212,13 +220,14 @@ export function Welcome({ api }: { api: WelcomeApi }) {
         <button id="sign-in" className="primary" type="button" onClick={() => { void api.analytics?.('auth_page_click', { button_name: 'sign_in' }); void start() }}>{m.welcomeSignIn}</button>
         <button ref={keyButton} id="api-key" className="secondary" type="button" onClick={() => { void api.analytics?.('auth_page_click', { button_name: 'api-key' }); navigate('key') }}>{m.welcomeApiKey}</button>
       </div>
+      </>}
       <div id="key-actions" className="actions" hidden={page !== 'key'}>
         <button id="save-key" className="primary" type="submit" form="key-form" disabled={busy || draft.trim() === ''}>{m.welcomeKeySave}</button>
         <button id="skip-key" className="secondary" type="button" disabled={busy} onClick={() => { void skip() }}>{m.welcomeKeyLater}</button>
-        <button id="back-to-login" className="back" type="button" disabled={busy} onClick={() => {
+        {accountEnabled && <button id="back-to-login" className="back" type="button" disabled={busy} onClick={() => {
           if (busyRef.current) return
           setDraft(''); setError(''); focusEntry.current = true; navigate('entry')
-        }}>{m.welcomeKeyBack}</button>
+        }}>{m.welcomeKeyBack}</button>}
       </div>
     </main>
   </>

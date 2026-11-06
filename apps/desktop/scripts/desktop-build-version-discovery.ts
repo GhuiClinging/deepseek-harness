@@ -31,10 +31,12 @@ const LISTING_DEADLINE_MS = 8_000
 const LISTING_PAGE_SIZE = 1000
 
 /** Artifact name electron-builder writes for one build, on either platform; unsigned and unnotarized builds add a suffix. */
-const ARTIFACT = /(?:^|\/)deepseek-harness-(?<version>.+)-(?:mac|win)-(?:arm64|x64)(?:-unsigned|-unnotarized)?\.(?:exe|dmg|zip)$/u
+const ARTIFACT = /^(?<version>.+)-(?:mac|win)-(?:arm64|x64)(?:-unsigned|-unnotarized)?\.(?:exe|dmg|zip)$/u
 
 /** Inputs that decide which versions are already taken. */
 export interface DesktopBuildVersionSuggestionOptions {
+  /** Local brand artifact prefix; omitted retains upstream bucket and filename discovery. */
+  readonly artifactPrefix?: string
   readonly productVersion: string
   readonly target: DesktopPackageTargetName
   readonly environment: NodeJS.ProcessEnv
@@ -73,11 +75,13 @@ function sequenceNumbers(versions: Iterable<string>, prefix: string): number[] {
 /**
  * Read the versions one output directory already holds.
  * @param artifactsRoot - Directory electron-builder wrote installers into.
+ * @param artifactPrefix - Selected brand ID or the upstream artifact prefix.
  * @returns Versions parsed from artifact names.
  */
-async function localVersions(artifactsRoot: string): Promise<string[]> {
+async function localVersions(artifactsRoot: string, artifactPrefix: string): Promise<string[]> {
   const entries = await readdir(artifactsRoot).catch(() => [])
-  return entries.map(entry => ARTIFACT.exec(entry)?.groups?.version)
+  return entries.filter(entry => entry.startsWith(`${artifactPrefix}-`))
+    .map(entry => ARTIFACT.exec(entry.slice(artifactPrefix.length + 1))?.groups?.version)
     .filter((version): version is string => version !== undefined && parse(version) !== null)
 }
 
@@ -123,7 +127,9 @@ async function remoteVersions(options: DesktopBuildVersionSuggestionOptions): Pr
         }),
       ])
       for (const key of page.keys) {
-        const version = ARTIFACT.exec(key)?.groups?.version
+        const filename = key.slice(key.lastIndexOf('/') + 1)
+        const version = filename.startsWith('deepseek-harness-')
+          ? ARTIFACT.exec(filename.slice('deepseek-harness-'.length))?.groups?.version : undefined
         if (version !== undefined && parse(version) !== null) versions.push(version)
       }
       marker = page.next
@@ -145,8 +151,9 @@ async function remoteVersions(options: DesktopBuildVersionSuggestionOptions): Pr
  */
 export async function suggestDesktopBuildVersion(options: DesktopBuildVersionSuggestionOptions): Promise<string> {
   const prefix = `${desktopBuildVersionPrefix(options.productVersion)}${options.date ?? desktopBuildDateSegment()}.`
-  const published = await remoteVersions(options)
-  const taken = published ?? await localVersions(options.artifactsRoot)
+  const artifactPrefix = options.artifactPrefix ?? 'deepseek-harness'
+  const published = options.artifactPrefix === undefined ? await remoteVersions(options) : undefined
+  const taken = published ?? await localVersions(options.artifactsRoot, artifactPrefix)
   const used = sequenceNumbers(taken, prefix)
   const next = used.length === 0 ? 1 : Math.max(...used) + 1
   const suggestion = validateDesktopBuildVersion(`${prefix}${String(next)}`, options.productVersion)

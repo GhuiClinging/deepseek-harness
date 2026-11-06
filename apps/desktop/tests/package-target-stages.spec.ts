@@ -2,6 +2,8 @@ import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { setImmediate } from 'node:timers/promises'
 import { afterEach, expect, it, vi } from 'vitest'
+import { loadDesktopBrand } from '../scripts/desktop-brand.mjs'
+import { localMacOSPackageEnvironment } from '../scripts/desktop-package-environment.mjs'
 import { packageTarget, parseDesktopPackageInvocation } from '../scripts/package-target.ts'
 import { withMacOSNotarizationProxy } from '../scripts/macos-notarization-proxy.ts'
 import { packageMacOSArtifacts } from '../scripts/package-macos.ts'
@@ -421,4 +423,20 @@ it.each([undefined, '7'])('applies file-owned compression only to the final nota
   expect(zip?.[3].env.ELECTRON_BUILDER_COMPRESSION_LEVEL).toBe(level ?? '3')
   expect(dmg?.[3].env.ELECTRON_BUILDER_COMPRESSION_LEVEL).toBe('9')
   expect(writeFileSync).toHaveBeenCalledOnce()
+})
+
+it('passes the selected public brand to every unsigned build and preparation stage', async () => {
+  const { run, stages } = supervisor()
+  const selected = loadDesktopBrand(resolve(import.meta.dirname, '../brands/huigong/brand.json'))
+  const env = localMacOSPackageEnvironment({}, selected)
+  await packageTarget(parseDesktopPackageInvocation(['mac-arm64', '--unsigned', '--brand', 'brands/huigong/brand.json'], 'darwin', 'arm64'), env, run)
+  expect(stages[0]).toBe('run build --profile brand')
+  expect(stages.some(stage => stage.startsWith('exec tsx apps/desktop/scripts/pack-local-packages.ts'))).toBe(true)
+  expect(stages).toContain('exec tsx scripts/smoke-packaged-runtime.ts --unsigned')
+  for (const call of run.run.mock.calls) {
+    expect(call[3].env.DSH_DESKTOP_BRAND).toBe(JSON.stringify(selected))
+    expect(call[3].env.DSH_DESKTOP_APP_ID).toBe('com.guohui.huigong')
+  }
+  expect(withMacOSNotarizationProxy).not.toHaveBeenCalled()
+  expect(writeFileSync).not.toHaveBeenCalled()
 })

@@ -20,10 +20,11 @@ type InvokeEvent = { sender?: unknown; senderFrame: { url: string } }
 type InvokeHandler = (event: InvokeEvent, ...args: unknown[]) => unknown
 
 const fileDrag = vi.hoisted(() => ({ dispose: vi.fn<() => Promise<void>>(), install: vi.fn() }))
+const webAuthentication = vi.hoisted(() => vi.fn<() => Promise<string>>().mockResolvedValue('test-cookie'))
 vi.mock('../src/file-drag.ts', () => ({ installDesktopFileDrag: () => { fileDrag.install(); return fileDrag.dispose } }))
 
 vi.mock('../src/web-document.ts', () => ({
-  authenticateWebHost: async () => 'test-cookie', serveWebDocument: vi.fn(), forwardWebRequest: vi.fn(),
+  authenticateWebHost: webAuthentication, serveWebDocument: vi.fn(), forwardWebRequest: vi.fn(),
   removeLegacyHostCookies: harness.removeLegacyHostCookies,
 }))
 vi.mock('../src/operation-report-job.ts', () => ({ runOperationReportJob: vi.fn(async () => ({ appended: false, timedOut: false, cancelled: false })) }))
@@ -2927,6 +2928,27 @@ describe('desktop main startup', () => {
     expect(host.stop).toHaveBeenCalledTimes(1)
     expect(window.urls).toEqual(['dsh-app://app/'])
     expect(harness.windows).toHaveLength(1)
+  })
+
+  it('does not republish a browser address when authentication settles after Host shutdown starts', async () => {
+    const authentication = Promise.withResolvers<string>()
+    webAuthentication.mockReturnValueOnce(authentication.promise)
+    await import('../src/main.ts')
+    await harness.preparing.promise
+    harness.prepared.resolve()
+    await harness.hostStarted.promise
+    const window = harness.windows[0]!
+    const host = harness.hosts[0]!
+    host.ready.resolve()
+    await vi.waitFor(() => { expect(webAuthentication).toHaveBeenCalledOnce() })
+    harness.app.quit()
+    await host.stopping.promise
+    authentication.resolve('test-cookie')
+    host.exited.resolve()
+    await harness.quitCompleted.promise
+    const ready = window.webContents.send.mock.calls.filter(([channel, value]) =>
+      channel === DESKTOP_IPC.webChanged && 'phase' in value && value.phase === 'ready')
+    expect(ready).toEqual([])
   })
 })
 

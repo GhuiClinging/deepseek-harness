@@ -35,6 +35,9 @@ import {
 import { desktopTargetPlatform, resolveDesktopBuildTarget, resolveDesktopTargetBuildPaths } from './desktop-build-paths.mjs'
 import { desktopRuntimeFileExclusion } from './runtime-file-policy.ts'
 import { selectOfficeEngine } from '../../../scripts/libreoffice-packages.mjs'
+import { resolveDesktopBrandEnvironment } from './desktop-brand.mjs'
+import { prepareDesktopBrandAssets } from './prepare-brand-assets.ts'
+import { prepareBundledPlugins } from './prepare-bundled-plugins.ts'
 
 const APP_ROOT = resolve(import.meta.dirname, '..')
 const BUILD_PATHS = resolveDesktopTargetBuildPaths()
@@ -123,10 +126,11 @@ async function main(): Promise<void> {
       mkdirSync(STORE_ROOT, { recursive: true })
     })
     const release = desktopRelease()
+    const bundledPlugins = resolveDesktopBrandEnvironment(process.env)?.brand.bundledPlugins ?? []
     const patches = await packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'runtime:stage-packages', async () => {
       copyFileSync(join(PACKAGE_SET_ROOT, DESKTOP_PACKAGE_SET_FILE), join(BUILD_ROOT, DESKTOP_PACKAGE_SET_FILE))
       cpSync(join(PACKAGE_SET_ROOT, DESKTOP_PACKAGES_DIR), join(BUILD_ROOT, DESKTOP_PACKAGES_DIR), { recursive: true })
-      createRuntimeProjectMetadata(BUILD_ROOT, release)
+      createRuntimeProjectMetadata(BUILD_ROOT, release, bundledPlugins)
       return prepareRuntimePatches(BUILD_ROOT, resolve(APP_ROOT, '..', '..'))
     })
     await packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'runtime:lockfile', () => runPnpm(['install', '--lockfile-only']))
@@ -153,8 +157,11 @@ async function main(): Promise<void> {
     })
     writeFileSync(join(DSH_OUTPUT_ROOT, 'package.json'), `${JSON.stringify({
       name: '@deepseek-ai/dsh-desktop-runtime', private: true, version: release.version, type: 'module',
-      dependencies: Object.fromEntries(packageSet.packages.map(entry => [entry.name, entry.version])),
+      dependencies: Object.fromEntries([...packageSet.packages, ...bundledPlugins].map(entry => [entry.name, entry.version])),
     }, undefined, 2)}\n`)
+    prepareBundledPlugins(DSH_OUTPUT_ROOT, bundledPlugins)
+    const selectedBrand = resolveDesktopBrandEnvironment()
+    if (selectedBrand?.brand.logo !== undefined) await prepareDesktopBrandAssets(DSH_OUTPUT_ROOT, selectedBrand)
     for (const file of DESKTOP_HOST_RUNTIME_FILES) {
       if (!existsSync(join(DSH_OUTPUT_ROOT, 'node_modules', DESKTOP_HOST_PACKAGE, file))) {
         throw new Error(`desktop runtime: missing private Host file ${file}`)

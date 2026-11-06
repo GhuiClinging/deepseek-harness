@@ -69,7 +69,15 @@ production 发布使用产品版本本身，不传 `--build-version`。其上传
 
 ## 配置与本地构建
 
-macOS 和 Windows 未签名安装包使用与本地 Web 构建相同的本地化 **DSH 本地构建** 标签及版本/commit 徽标。签名安装包保留官方品牌，包括 test 部署和跳过公证的 macOS 构建。原生应用及安装器名称不变。
+未选择品牌的 macOS 和 Windows 未签名安装包使用与本地 Web 构建相同的本地化 **DSH 本地构建** 标签及版本/commit 徽标。签名安装包保留官方品牌，包括 test 部署和跳过公证的 macOS 构建。未选择品牌时，原生应用及安装器名称不变。
+
+本地未签名的 Apple Silicon **辉总后宫智囊团** 包使用[品牌描述符与角色说明](../brands/README.zh.md)：
+
+```sh
+pnpm --dir apps/desktop run package:mac:arm64:unsigned --brand brands/huigong/brand.json --build-version 0.2.2-alpha.3.20261105.1 --check
+```
+
+省略 `--check` 后，安装包生成在 `apps/desktop/.desktop-build/brands/huigong/targets/mac-arm64/unsigned-artifacts/`。此本地包不签名、不公证、不上传发布，也不提供自动更新源；安装包启动和已安装升级需单独验收。角色由所选源码描述文件的 `personaSource: bundled` 决定；现有本地角色文件保持原样。角色、安装包身份、图标及内置插件版本需要重新打包。
 
 本地 Windows 命令通过 `DSH_PACKAGING_CONFIG_DIR` 指定机器配置绝对目录，通过 `DSH_PACKAGING_PRESET` 选择 `test` 或 `production`。加载器读取 `presets/<preset>.env`；签名命令另读 `secrets/windows-signing.env`。相对证书和 SignTool 路径以声明它们的文件所在目录为基准。公开 preset 拒绝凭据，签名文件不能覆盖公开配置。配置缺失立即失败，不回退到 `.env.windows`；不选择 preset 的命令保留原 dotenv 行为。未签名和仅准备 preset 不读取签名文件。缓存维护也只读取公开 preset 配置。签名测试包还需现有下载 origin 和 release ID，但无需上传凭据。本地 preset 命令使用 `--build-version auto` 时仅按本地产物编号；Actions 使用运行编号和重试次数。
 
@@ -244,7 +252,7 @@ pnpm run dev:bundle-registry
 
 ## 运行时文件筛选与安装检查
 
-Desktop 在本地打包工作区包，并通过目标捆绑的 Node 和 pnpm 安装外部依赖。[Desktop 文件策略](../scripts/runtime-file-policy.ts)随后在签名和完整性封装前过滤不可变的 `resources/app.asar/dsh/node_modules` 副本。它排除 TypeScript 声明、已识别的 JavaScript/CSS/TypeScript source map、TypeScript 构建缓存、Domino 测试目录及 Yarn 开发元数据、选定的原生编译器输出和其他平台的 node-pty 预构建文件。非 Windows 目标还会排除 `node-pty/third_party/conpty`；Windows 目标保留该目录。它保留运行时 JavaScript、目标平台的原生模块及其 DLL/EXE 辅助文件、WASM、未知资源、许可证和 notices。依赖清单在完整性封装前经过 electron-builder 的元数据清理，确保归档保持已记录的字节。该策略不修改 npm tarball、捆绑的包管理器或用户安装的插件文件。
+Desktop 在本地打包工作区包，并通过目标捆绑的 Node 和 pnpm 安装外部依赖。[Desktop 文件策略](../scripts/runtime-file-policy.ts)随后在签名和完整性封装前过滤不可变的 `resources/app.asar/dsh/node_modules` 副本。它排除 TypeScript 声明、已识别的 JavaScript/CSS/TypeScript source map、TypeScript 构建缓存、`.gitkeep` 目录占位文件、Domino 测试目录及 Yarn 开发元数据、选定的原生编译器输出和其他平台的 node-pty 预构建文件。非 Windows 目标还会排除 `node-pty/third_party/conpty`；Windows 目标保留该目录。它保留运行时 JavaScript、目标平台的原生模块及其 DLL/EXE 辅助文件、WASM、未知资源、许可证和 notices。依赖清单在完整性封装前经过 electron-builder 的元数据清理，确保归档保持已记录的字节。该策略不修改 npm tarball、捆绑的包管理器或用户安装的插件文件。
 
 [Electron 外壳文件清单](../scripts/electron-builder-config.mjs)从单独收集的 `resources/app.asar/node_modules` 依赖中排除已识别的 JavaScript/CSS/TypeScript source map 和 TypeScript 构建缓存。这些排除规则保留运行时代码、原生模块、WASM、数据文件（包括普通 `.map` 资源）、许可证和 notices；[外壳归档测试](../tests/shell-file-selection.spec.ts)检查保留文件的字节和排除项。
 

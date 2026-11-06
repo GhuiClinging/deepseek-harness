@@ -1,0 +1,16 @@
+# Bilingual-pair consistency record for guide.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/upgrade-guide/v0.2.2-alpha.3/huigong-persona-source/guide.md
+/:
+  en: 58e5cebe059d06a1
+  zh: 08437cebe5fb923a
+/huigong-uses-its-packaged-persona:
+  en: c4b17adee70248dc
+  zh: 7520878a181b06e0
+/huigong-uses-its-packaged-persona/change:
+  en: d027229d0c734272
+  zh: 0d3609f12c85ac6f
+/huigong-uses-its-packaged-persona/migration:
+  en: 655496a00db0258d
+  zh: 5888815060cf59db

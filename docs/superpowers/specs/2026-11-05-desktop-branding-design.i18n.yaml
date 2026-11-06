@@ -1,0 +1,40 @@
+# Bilingual-pair consistency record for 2026-11-05-desktop-branding-design.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/superpowers/specs/2026-11-05-desktop-branding-design.md
+/:
+  en: ae2d26c122b5caff
+  zh: 9366a84365b516c6
+/branded-desktop-installation-design:
+  en: 73111426159b8a2a
+  zh: 24314f72030bdafd
+/branded-desktop-installation-design/summary:
+  en: c20766861bde7c80
+  zh: 1056c25f8c801d05
+/branded-desktop-installation-design/contents:
+  en: 515d0b632491a4c1
+  zh: 83730e3d4f2138c1
+/branded-desktop-installation-design/goal-and-scope:
+  en: e86ccb8a71122486
+  zh: 8094c4b0c4edc2f0
+/branded-desktop-installation-design/first-brand-and-persona:
+  en: 68e4ec6aa10b4535
+  zh: f39eb81dfe9e1c50
+/branded-desktop-installation-design/current-implementation:
+  en: df657443cc2a8b18
+  zh: 90339541db0a86d0
+/branded-desktop-installation-design/proposed-implementation:
+  en: 7e514fe98b684391
+  zh: da6998944806a7f0
+/branded-desktop-installation-design/alternatives:
+  en: d5b0dbf292ac5f7a
+  zh: b3fda7e1495c5c50
+/branded-desktop-installation-design/delivery-and-verification:
+  en: f796e1f3046e0d97
+  zh: 4234478cc64422d7
+/branded-desktop-installation-design/open-decisions:
+  en: 15795ec6df1f7b2b
+  zh: 36820bcac3828799
+/branded-desktop-installation-design/dev-note:
+  en: dd107a834c6de58a
+  zh: 5585ad69af41f444

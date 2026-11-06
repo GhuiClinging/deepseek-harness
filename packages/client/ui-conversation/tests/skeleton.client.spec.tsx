@@ -126,6 +126,7 @@ function mount(
   workspaceRows: WorkspaceView[] = [{ ...workspace('one'), sessionIds: [SID] }],
   retargetWorkspace = vi.fn(async (_workspaceId: WorkspaceId) => {}),
   options: {
+    brand?: ConversationContentProps['brand']
     /** Explicit undefined exercises the shell before a Session is selected. */
     sessionId?: SessionId | undefined
     /** When true, mimic overlay:true chain siblings (hidden fallback + takeover). */
@@ -375,7 +376,8 @@ function mount(
     )) as ConversationContentProps['useFactorySlot']
     return (
       <FactoryViewsTestContext.Provider value={common}>
-        <ConversationContent {...({ ...common, ...runtimeProps, ...input, useFactorySlot })} />
+        <ConversationContent {...({ ...common, ...runtimeProps, ...input, useFactorySlot,
+          ...(options.brand === undefined ? {} : { brand: options.brand }) })} />
       </FactoryViewsTestContext.Provider>
     )
   }) as ConversationSlotProps['renderFactorySlot']
@@ -411,6 +413,15 @@ function mount(
 }
 
 describe('Hero chrome', () => {
+  it('renders a configured greeting and mark through the existing hero fallback', () => {
+    const renderSlot: HeroShellProps['renderSlot'] = (_key, _owner, options) => options?.fallback ?? null
+    const view = render(<HeroShell t={t} renderSlot={renderSlot} brand={{ mark: '辉', greeting: '欢迎回来，主人。今天有什么事务交给我？' }} />)
+    expect(view.getByText('辉')).toBeTruthy()
+    expect(view.getByText('欢迎回来，主人。今天有什么事务交给我？')).toBeTruthy()
+    expect(view.container.textContent).not.toContain(zh['hero.preview'])
+    expect(view.container.querySelector('svg')).toBeNull()
+  })
+
   it('renders the English preview badge through the hero locale seat', () => {
     const renderSlot = vi.fn<HeroShellProps['renderSlot']>(() => null)
     const view = render(<HeroShell t={makeTranslate(en, commonEn)} renderSlot={renderSlot} />)
@@ -433,6 +444,7 @@ describe('ConversationRoot resident composer', () => {
     const b = mount(sessionSnapshotOf(), [], undefined, { sessionId: undefined })
     expect(b.view.container.querySelector('header')).not.toBeNull()
     expect(b.view.getByTestId('view-conversation.header.leading')).toBeTruthy()
+    expect(b.view.getByTestId('view-conversation.header.actions')).toBeTruthy()
     expect(b.slotCalls).not.toContain('conversation.session.header')
     expect(b.view.queryByRole('tablist')).toBeNull()
     expect(b.view.queryByTestId('view-conversation.session.header.corner')).toBeNull()
@@ -561,6 +573,14 @@ describe('ConversationRoot resident composer', () => {
     const fallback = b.view.container.querySelector('[data-chain-overlay-fallback="conversation.composer"]')
     expect(seat?.contains(takeover)).toBe(true)
     expect(seat?.contains(fallback)).toBe(true)
+  })
+
+  it('threads the configured greeting through the resident conversation content', () => {
+    const b = mount(sessionSnapshotOf({ blank: true }), undefined, undefined, {
+      summaryBlank: true, brand: { mark: '辉', greeting: '主人，今天也请交给我。' },
+    })
+    expect(b.view.getByText('主人，今天也请交给我。')).toBeTruthy()
+    expect(b.view.getByTestId('view-conversation.hero.brand.mark')).toBeTruthy()
   })
 
   it('hero phase: keeps sidebar controls accessible while hiding conversation chrome', () => {

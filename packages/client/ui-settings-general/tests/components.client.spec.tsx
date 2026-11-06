@@ -28,6 +28,8 @@ function derivedDocumentStore(remote: object) {
 }
 import { en, zh } from '../src/client/locales.ts'
 import { CurrentVersionRow } from '../src/client/CurrentVersionRow.tsx'
+import { DesktopWebEntry } from '../src/client/DesktopWebEntry.tsx'
+import { LocalProfileEditor, LocalProfileTrigger } from '../src/client/LocalProfile.tsx'
 import { DesktopUpdateBadge } from '../src/client/DesktopUpdateIndicator.tsx'
 import { HostReleasePrompt, type HostReleasePromptProps } from '../src/client/HostReleasePrompt.tsx'
 import type { DesktopUpdateView } from '../src/types.ts'
@@ -49,6 +51,33 @@ const kit = {
   ...allowAllAccess,
   useContextMenu: contextMenuHook(),
 }
+
+it('opens the browser through an icon without displaying the Host address', async () => {
+  const state = createSnapshotStore({ host: { phase: 'ready' as const, address: 'http://127.0.0.1:50888/' }, opening: false, failed: false })
+  const open = vi.fn(async () => {})
+  render(<DesktopWebEntry {...kit} t={t} useWeb={bindSnapshotSelector(state)} open={open} />)
+  expect(screen.queryByText('http://127.0.0.1:50888/')).toBeNull()
+  expect(screen.getByRole('button', { name: en['desktop.web.open'] }).textContent).toBe('')
+  fireEvent.click(screen.getByRole('button', { name: en['desktop.web.open'] }))
+  expect(open).toHaveBeenCalledOnce()
+})
+
+it('renders a local nickname with a user icon and edits it through the profile save action', async () => {
+  const profile = createSnapshotStore({ value: { localNickname: '郭辉', localAvatar: '' }, status: 'ready' as const,
+    writable: true, revision: 1, base: {}, user: {} })
+  const operation = createSnapshotStore({ saving: false })
+  const save = vi.fn(async () => true)
+  render(<>
+    <LocalProfileTrigger {...kit} t={t} wide useProfile={bindSnapshotSelector(profile)} />
+    <LocalProfileEditor {...kit} t={t} useProfile={bindSnapshotSelector(profile)}
+      useProfileSave={bindSnapshotSelector(operation)} save={save} />
+  </>)
+  expect(screen.getByText('郭辉')).toBeTruthy()
+  expect(screen.getByText(en['profile.description'])).toBeTruthy()
+  fireEvent.change(screen.getByRole('textbox', { name: en['profile.nickname'] }), { target: { value: '新昵称' } })
+  fireEvent.click(screen.getByRole('button', { name: en['profile.save'] }))
+  await waitFor(() => { expect(save).toHaveBeenCalledWith({ localNickname: '新昵称', localAvatar: '' }) })
+})
 
 describe('Desktop collapsed update badge', () => {
   it('shows update and retry status and yields to connection feedback', () => {

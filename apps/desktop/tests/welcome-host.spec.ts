@@ -105,3 +105,15 @@ describe('desktop welcome Web operations', () => {
     expect(JSON.parse(init!.body as string)).toMatchObject({ payload: { args: { event } } })
   })
 })
+
+it('uses API-key onboarding without account queries, streams or analytics for a brand', async () => {
+  const host = transport('zh')
+  const backend = connectDesktopWelcome(url, cookie, host.send, 'api-key')
+  expect(await backend.read()).toMatchObject({ loggedIn: false, hasApiKey: false })
+  expect(await backend.analyticsEnabled()).toBe(false)
+  await backend.report({ eventName: 'desktop_app_launch', timestamp: 100, attributes: {} })
+  expect(backend.account).toBeUndefined()
+  expect(host.send.mock.calls.some(([input]) => /account|productAnalytics/u.test(input))).toBe(false)
+  expect(await backend.save('sk-brand')).toEqual({ ok: true })
+  expect(await backend.read()).toMatchObject({ hasApiKey: true })
+})

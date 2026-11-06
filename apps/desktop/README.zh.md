@@ -10,6 +10,8 @@ description: "Desktop 在原生应用中运行 Harness 工作区。本参考文�
 
 Desktop 在原生应用中运行 Harness 工作区。本参考文档说明应用行为、开发与集成；打包、Windows 签名和发布指南分别维护构建与发布操作。
 
+选择[品牌安装](brands/README.zh.md#installed-runtime)后，原生产品文案使用该产品名称，真实提供方名称保持准确。Welcome 直接打开 API-key 页面，省略账号导航，并通过隔离的 preload 显示所选字标、文字标记和当前角色问候语。未选择品牌的安装保留账号欢迎流程。
+
 ## 目录
 
 - [应用概览](#application-overview)

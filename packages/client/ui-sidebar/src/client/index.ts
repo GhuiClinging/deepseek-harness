@@ -75,7 +75,15 @@ export function apply(ctx: ClientContext): void {
     subscribe: (listener: () => void) => ctx.slots.subscribe('sidebar.panellist.actions', listener),
   }
 
+  const runtimeBrand = (globalThis as typeof globalThis & {
+    dshDesktopBrand?: { readonly mark: string; readonly wordmark: string; readonly logo?: string }
+  }).dshDesktopBrand
+  const mark = runtimeBrand?.mark ?? process.env.DSH_CLIENT_BRAND_MARK
+  const wordmark = runtimeBrand?.wordmark ?? process.env.DSH_CLIENT_BRAND_WORDMARK
+  const logo = runtimeBrand?.logo ?? process.env.DSH_CLIENT_BRAND_LOGO
+  const brand = mark === undefined || wordmark === undefined ? undefined : { mark, wordmark, ...(logo === undefined ? {} : { logo }) }
   const injectProps = (): SidebarRootInjected => ({
+    ...(brand === undefined ? {} : { brand }),
     // The shell's New Session button rides the Workspace UI's shared action
     // (current Session Workspace, then recent Workspace).
     startSession: (workspaceId) => { workspaceNavigation.startSession(workspaceId) },

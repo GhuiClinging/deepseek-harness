@@ -21,7 +21,7 @@ description: "为本地未签名 macOS Desktop 构建选择公开产品身份与
 
 ## 描述文件
 
-[辉总后宫智囊团描述文件](huigong/brand.json) 提供 `id`、`name`、`wordmark`、`appId`、`protocol`、`storageNamespace`、`mark` 和 `persona`（`name`、`address`、`greeting`、`instructions`、`completion`）。仅供构建使用的 `icons.mac` 为必填项，`icons.windows` 可选。相对路径以描述文件所在目录为基准，构建开始前必须指向可读文件。辉总品牌的应用图标和固定标志均使用[女仆团队 PNG](huigong/material/icon/hui_maid_team_icon_no_black_border.png)。`backgrounds` 指向 `material/background`：`vertical` 用于侧边栏，`horizontal` 用于主页与 Conversation。这些资源随应用打包，运行时无需桌面上的素材目录。
+[辉总后宫智囊团描述文件](huigong/brand.json) 提供 `id`、`name`、`wordmark`、`appId`、`protocol`、`storageNamespace`、`mark` 和 `persona`（`name`、`address`、`greeting`、`instructions`、`completion`）。仅供构建使用的 `icons.mac` 为必填项，`icons.windows` 可选。相对路径以描述文件所在目录为基准，构建开始前必须指向可读文件。辉总品牌的应用图标和固定标志均使用 `material/icon/hui_maid_team_icon_no_black_border.png`。`backgrounds` 指向 `material/background`：`vertical` 用于侧边栏，`horizontal` 用于主页与 Conversation。本地 `huigong/material/` 目录由 Git 忽略，打包前需自行准备引用的文件。所选素材会复制进应用，运行时无需这份源码素材目录。
 
 共用[解析器](../src/brand.ts) 拒绝缺失或未知的元数据字段、不安全的标识符和空文本。应用名称允许字母、数字、组合附加符、空格、内部点号、下划线和连字符；必须以字母或数字开头，排除保留文件名，且最多使用 251 个 UTF-8 字节，为 `.app` 留出空间。已接受名称不会被当前安装的 builder 文件名处理改写。描述文件只包含公开默认值，不得填写签名凭据、模型密钥或客户秘密。
 

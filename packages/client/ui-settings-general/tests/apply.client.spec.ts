@@ -120,8 +120,9 @@ describe('ui-settings-general apply', () => {
   }, COLD_BOOT_TIMEOUT_MS)
 
   it('uses the shared Host form for brand identity and persists both local profile fields atomically', async ({ mock, start }) => {
-    vi.stubEnv('DSH_CLIENT_BUILD_PROFILE', 'brand')
-    onTestFinished(() => { vi.unstubAllEnvs() })
+    vi.stubEnv('DSH_CLIENT_BUILD_PROFILE', undefined)
+    vi.stubGlobal('dshDesktopBrand', { authenticationMode: 'account', mark: '辉', persona: { greeting: '欢迎回来，主人。' } })
+    onTestFinished(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs() })
     const profile = (nickname: string, revision: number): SettingsNamespaceView => ({
       ns: 'ui-settings-general', schema: JSON.parse(JSON.stringify(
         z.object({ localNickname: z.string(), localAvatar: z.string() }).toJSON(),
@@ -132,7 +133,7 @@ describe('ui-settings-general apply', () => {
       namespaces: [localeView('zh'), profile('郭辉', 0)] }))
     const c = await start()
     await c.ctx.configForms.describe().ensure()
-    expect(c.ctx.slots.entries('settings.trigger').some(entry => entry.component === LocalProfileTrigger)).toBe(true)
+    expect(c.ctx.slots.entries('settings.launcher.identity').some(entry => entry.component === LocalProfileTrigger)).toBe(true)
     const entry = c.ctx.slots.entries('settings.general.item').find(entry => entry.component === LocalProfileEditor)!
     const injected = entry.inject?.() as Partial<LocalProfileEditorInjected>
     if (injected.hooks === undefined || injected.save === undefined) throw new Error('local profile actions are missing')
@@ -146,7 +147,7 @@ describe('ui-settings-general apply', () => {
   })
 
   it('declares the services it uses', () => {
-    expect(inject).toEqual(['slots', 'locale', 'connection', 'remote', 'remote.settings', 'configForms', 'shortcuts', 'modules', 'remoteAccess'])
+    expect(inject).toEqual(['slots', 'locale', 'connection', 'remote', 'remote.settings', 'remote.directoryPicker', 'configForms', 'shortcuts', 'modules', 'remoteAccess'])
   })
 
   it('fills the five seats of the shell it declares, with the locale-following General label', async ({ mock, start }) => {

@@ -19,6 +19,7 @@
     "completion": "主人，您的吩咐奴婢已经完成了，请过目。"
   },
   "icons": {
-    "mac": "icon.png"
-  }
+    "mac": "material/icon/hui_maid_team_icon_no_black_border.png"
+  },
+  "backgrounds": "material/background"
 }

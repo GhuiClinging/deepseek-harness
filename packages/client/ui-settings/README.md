@@ -55,7 +55,7 @@ A committed write folds its answer into the shared mirror. Refused writes refres
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
 
-The optional `settings.launcher` contribution receives sidebar geometry, whether the open Settings panel covers the sidebar, the settings navigation callbacks, and the effective Settings key labels and accessible combination. The shell omits shortcut presentation for an unbound command and retains its plain Settings trigger when no launcher is registered.
+The optional `settings.launcher` contribution receives sidebar geometry, whether the open Settings panel covers the sidebar, whether the branded local profile should identify the launcher, the settings navigation callbacks, and the effective Settings key labels and accessible combination. The shell omits shortcut presentation for an unbound command and retains its plain Settings trigger when no launcher is registered.
 
 <details>
 <summary>Implementation internals — click to expand</summary>

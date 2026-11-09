@@ -12,6 +12,7 @@
 .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Signed-out launcher: a 32px More row carrying the 14px ellipsis. */
 .trigger[data-signed-out='true']:not([data-collapsed='true']) { height: 32px; padding: 6px calc(var(--dsh-sidebar-row-padding) - var(--dsh-sidebar-paint-inset)); line-height: 20px; }
+.trigger[data-local-profile='true'][data-signed-out='true']:not([data-collapsed='true']) { height: 44px; }
 
 /* Signed-out menu card and rows; listClassName reaches the portaled card. */
 .signedOutMenu[role='menu'] {

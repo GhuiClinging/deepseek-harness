@@ -316,6 +316,7 @@ export function SidebarRoot({
   return (
     <div
       ref={column}
+      data-brand-sidebar-content
       onFocusCapture={(event) => { sidebarFocus.current = event.target }}
       role={drawer ? 'dialog' : undefined}
       data-shortcut-modal={drawer ? 'sidebar' : undefined}

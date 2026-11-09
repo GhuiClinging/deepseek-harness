@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { chromium, type Browser } from 'playwright'
 import { expect, it, onTestFinished } from 'vitest'
 import { launchWebScaffold, type WebScaffold } from './scaffold.ts'
+import { openSettings } from './support.ts'
 import { loadDesktopBrand } from '../../desktop/scripts/desktop-brand.mjs'
 import { prepareDesktopBrandProfile } from '../../desktop/src/brand-profile.ts'
 
@@ -15,7 +16,8 @@ it('shares a saved local nickname and normalized avatar across two clients and a
     try { await resources.browser?.close() } finally { await resources.scaffold?.close() }
   })
   const home = await mkdtemp(join(tmpdir(), 'huigong-local-profile-web-'))
-  const brand = loadDesktopBrand(fileURLToPath(new URL('../../desktop/brands/huigong/brand.json', import.meta.url))).brand
+  const selected = loadDesktopBrand(fileURLToPath(new URL('../../desktop/brands/huigong/brand.json', import.meta.url)))
+  const brand = selected.brand
   const prepared = await prepareDesktopBrandProfile(brand, home)
   const scaffold = await launchWebScaffold({ harnessHome: home, extraOverlayPath: prepared.patchPath, profile: { packages: [] } })
   resources.scaffold = scaffold
@@ -30,16 +32,15 @@ it('shares a saved local nickname and normalized avatar across two clients and a
   second.on('pageerror', error => errors.push(error.message))
   await first.goto(scaffold.authenticatedUrl)
   await second.goto(scaffold.authenticatedUrl)
-  await first.getByRole('button', { name: '设置', exact: true }).waitFor()
-  await first.getByRole('button', { name: '设置', exact: true }).click()
+  await openSettings(first, 'zh')
   const editor = first.getByRole('region', { name: '本机资料', exact: true })
   await editor.waitFor()
   await editor.getByRole('textbox', { name: '昵称', exact: true }).fill('验收用户')
-  await editor.locator('input[type="file"]').setInputFiles(fileURLToPath(new URL('../../desktop/brands/huigong/icon.png', import.meta.url)))
+  await editor.locator('input[type="file"]').setInputFiles(selected.icons.mac)
   await editor.locator('img[src^="data:image/png;base64,"]').waitFor()
   await editor.getByRole('button', { name: '保存资料', exact: true }).click()
   await first.getByText('本机资料已保存', { exact: true }).waitFor()
-  await expect.poll(() => second.getByRole('button', { name: '设置', exact: true }).textContent()).toContain('验收用户')
+  await expect.poll(() => second.getByRole('button', { name: '账号菜单', exact: true }).textContent()).toContain('验收用户')
   const profile = join(home, 'profiles/scaffold/cordis.patch.yml')
   await expect.poll(async () => (await readFile(profile, 'utf8')).includes('验收用户')).toBe(true)
   const screenshots = fileURLToPath(new URL('../../../.dsh-build/huigong/extensions-screenshots/', import.meta.url))
@@ -51,7 +52,7 @@ it('shares a saved local nickname and normalized avatar across two clients and a
   expect(await editor.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
   await first.screenshot({ path: join(screenshots, 'local-profile-narrow.png'), fullPage: true })
   await second.reload()
-  await expect.poll(() => second.getByRole('button', { name: '设置', exact: true }).textContent()).toContain('验收用户')
-  expect(await second.getByRole('button', { name: '设置', exact: true }).locator('img').getAttribute('src')).toMatch(/^data:image\/png;base64,/u)
+  await expect.poll(() => second.getByRole('button', { name: '账号菜单', exact: true }).textContent()).toContain('验收用户')
+  expect(await second.getByRole('button', { name: '账号菜单', exact: true }).locator('img').getAttribute('src')).toMatch(/^data:image\/png;base64,/u)
   expect(errors).toEqual([])
 })

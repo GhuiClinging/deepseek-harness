@@ -331,7 +331,9 @@ export function apply(ctx: Context): void {
     }, AccountPlatformHost))
   }
   ctx.remoteAccess.whenAccess('account/watch', () => ctx.slots.inject('settings.launcher', () => ctx.slots.register({
-    name: 'settings.launcher', locale: 'settings.account', inject: () => operations,
+    name: 'settings.launcher', locale: 'settings.account',
+    children: { 'settings.launcher.identity': { kind: 'single', scope: 'root' } },
+    inject: () => operations,
   }, AccountMenu)))
   ctx.remoteAccess.whenAccess('account/watch', () => ctx.slots.inject('settings.section', () => {
     let unregister: (() => void) | undefined

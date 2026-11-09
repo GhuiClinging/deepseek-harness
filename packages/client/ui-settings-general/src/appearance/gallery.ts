@@ -4,7 +4,7 @@ import { constants } from 'node:fs'
 import { lstat, open, readdir, realpath } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { basename, dirname, extname, join, resolve } from 'node:path'
-import type { AppearanceCatalog } from '../types.ts'
+import type { AppearanceCatalog, AppearanceRegion } from '../types.ts'
 
 const MAX_BYTES = 20 * 1024 * 1024
 const MAX_IMAGES = 500
@@ -17,6 +17,7 @@ export interface AppearanceDirectories {
 }
 
 interface ImageEntry {
+  readonly region: AppearanceRegion
   readonly path: string
   readonly root: string
   readonly selection: string
@@ -37,27 +38,34 @@ function expandFolder(path: string): string {
 
 /** Local folder inventory and version-bound, non-following file reads. */
 export class AppearanceGallery {
-  private entries = new Map<string, ImageEntry>()
+  private entries = new Map<AppearanceRegion, Map<string, ImageEntry>>()
+  private readonly previews: AppearanceGallery[] = []
 
   /** @param directories - Current accepted configuration, read again before every resource access. */
-  constructor(private readonly directories: () => AppearanceDirectories) {}
+  constructor(private readonly directories: (region: AppearanceRegion) => AppearanceDirectories) {}
 
-  private selection(): string | undefined {
-    const { folder, builtinDirectory } = this.directories()
+  private selection(region: AppearanceRegion): string | undefined {
+    const { folder, builtinDirectory } = this.directories(region)
     const selected = folder.trim()
     return selected !== '' ? expandFolder(selected) : builtinDirectory === '' ? undefined : join(builtinDirectory, 'backgrounds')
   }
 
-  /** Scan accepted raster files without publishing local diagnostic paths.
+  /** Scan horizontal photos for chat and vertical photos for the sidebar; flat folders serve both.
+   * @param region - Photograph location; omitted selects chat.
    * @returns Current bounded inventory, or an unavailable state.
    */
-  async catalog(): Promise<AppearanceCatalog> {
-    const selection = this.selection()
+  async catalog(region: AppearanceRegion = 'chat'): Promise<AppearanceCatalog> {
+    const selection = this.selection(region)
     if (selection === undefined) return { images: [], unavailable: false }
     try {
       const info = await lstat(selection)
       if (!info.isDirectory() || info.isSymbolicLink()) return { images: [], unavailable: true }
-      const root = await realpath(selection)
+      const folders = await readdir(selection)
+      const directory = folders.some(name => name === 'horizontal' || name === 'vertical')
+        ? join(selection, region === 'sidebar' ? 'vertical' : 'horizontal') : selection
+      const directoryInfo = await lstat(directory)
+      if (!directoryInfo.isDirectory() || directoryInfo.isSymbolicLink()) return { images: [], unavailable: true }
+      const root = await realpath(directory)
       const names = await readdir(root, { withFileTypes: true })
       const next = new Map<string, ImageEntry>()
       for (const item of names.sort((a, b) => a.name.localeCompare(b.name))) {
@@ -75,15 +83,31 @@ export class AppearanceGallery {
         if (mediaType(header) === undefined) continue
         const version = `${metadata.dev}:${metadata.ino}:${metadata.size}:${metadata.mtimeMs}:${metadata.ctimeMs}`
         const digest = createHash('sha256').update(`${path}\0${version}`).digest('hex')
-        next.set(digest, { path, root, selection, version })
+        next.set(digest, { path, root, selection, version, region })
       }
-      if (selection !== this.selection()) return { images: [], unavailable: true }
-      this.entries = next
+      if (selection !== this.selection(region)) return { images: [], unavailable: true }
+      this.entries.set(region, next)
       return { images: [...next.keys()].map(key => `${IMAGE_ROUTE}?key=${key}`), unavailable: false }
     } catch (_error) {
       // A changing or unreadable folder is reported without publishing a partial replacement.
       return { images: [], unavailable: true }
     }
+  }
+
+  /**
+   * Inventory an explicitly selected draft folder without changing saved settings or active inventories.
+   * @param region - Requested preview location.
+   * @param folder - Owner-selected directory; empty uses packaged images for that region.
+   * @returns Bounded preview references; the latest eight nonempty previews remain readable independently across clients.
+   */
+  async preview(region: AppearanceRegion, folder: string): Promise<AppearanceCatalog> {
+    const gallery = new AppearanceGallery(() => ({ folder, builtinDirectory: this.directories(region).builtinDirectory }))
+    const catalog = await gallery.catalog(region)
+    if (!catalog.unavailable && catalog.images.length > 0) {
+      this.previews.push(gallery)
+      if (this.previews.length > 8) this.previews.shift()
+    }
+    return catalog
   }
 
   /**
@@ -93,8 +117,16 @@ export class AppearanceGallery {
    */
   async image(request: Request): Promise<Response> {
     const key = new URL(request.url).searchParams.get('key') ?? ''
-    const entry = /^[a-f0-9]{64}$/u.test(key) ? this.entries.get(key) : undefined
-    if (entry === undefined || entry.selection !== this.selection()) return new Response(null, { status: 404 })
+    const entry = /^[a-f0-9]{64}$/u.test(key)
+      ? [...this.entries.values()].map(entries => entries.get(key))
+        .find(value => value !== undefined && value.selection === this.selection(value.region)) : undefined
+    if (entry === undefined) {
+      for (const preview of this.previews) {
+        const response = await preview.image(request)
+        if (response.status === 200) return response
+      }
+      return new Response(null, { status: 404 })
+    }
     return this.read(entry.path, entry.root, entry.version)
   }
 
@@ -102,7 +134,7 @@ export class AppearanceGallery {
    * @returns The packaged brand image, or an unavailable response.
    */
   async logo(): Promise<Response> {
-    const directory = this.directories().builtinDirectory
+    const directory = this.directories('chat').builtinDirectory
     if (directory === '') return new Response(null, { status: 404 })
     return this.read(join(directory, 'logo.png'), directory)
   }

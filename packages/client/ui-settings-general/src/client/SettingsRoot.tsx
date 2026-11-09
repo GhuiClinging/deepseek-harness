@@ -25,6 +25,7 @@ import type { ConnectionIndicatorState } from '@deepseek-ai/dsh-client-ui-primit
 import type { SettingsRootComponentProps, SettingsSectionRow } from './shell-contract.ts'
 import css from './SettingsRoot.module.css'
 import { DesktopUpdateIndicator } from './DesktopUpdateIndicator.tsx'
+import { isBrandedClient } from './brand-profile.ts'
 
 const RECOVERY_CONFIRMATION_MS = 2_000
 
@@ -224,7 +225,7 @@ export function SettingsRoot(props: SettingsRootComponentProps) {
     <>
       <div className={clsx(css.triggerRow, !wide && css.railRow)}>
         {renderSlot('settings.launcher', {
-          wide, settingsOpen: open, openSettings: actions.open,
+          wide, settingsOpen: open, showLocalProfile: isBrandedClient(), openSettings: actions.open,
           ...(shortcut?.keys.length ? { settingsShortcut: { keys: shortcut.keys, aria: shortcut.aria } } : {}),
           openOnboarding: (id) => { close(); setRequestedOnboarding(id) },
         }, { fallback: <Tooltip disabled={open} label={t('trigger')} shortcutKeys={shortcut?.keys}>

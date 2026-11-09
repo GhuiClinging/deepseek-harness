@@ -101,6 +101,20 @@ async function accountMenu(operations: AccountSectionInjected, snapshot: () => A
     openOnboarding={() => {}} openSettings={() => {}} t={key => en[key as AccountKey]} />
 }
 
+it('renders the branded local profile in the launcher and keeps the account sign-in menu', async () => {
+  const operations = operationsOf({ status: 'signed-out', attempt: null })
+  const { AccountMenu } = await import('../src/client/AccountMenu.tsx')
+  render(<AccountMenu {...({} as GlobalStandardProps)} {...operations}
+    settingsOpen={false} showLocalProfile renderSlot={() => <span data-testid="local-profile">彤答应</span>}
+    useAccount={selector => selector(operations.hooks.account.getSnapshot())}
+    useTheme={selector => selector(operations.hooks.theme.getSnapshot())} wide
+    openOnboarding={() => {}} openSettings={() => {}} t={key => en[key as AccountKey]} />)
+
+  expect(screen.getByTestId('local-profile').textContent).toBe('彤答应')
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: en.menu })) })
+  expect(screen.getByRole('menuitem', { name: en.signIn })).toBeTruthy()
+})
+
 it.each([en, zh])('renders account cards without inventing profile or balance data', async (copy) => {
   mount({ status: 'credential-stored', attempt: null }, copy)
   expect(screen.getByText(copy.signedIn)).toBeTruthy()

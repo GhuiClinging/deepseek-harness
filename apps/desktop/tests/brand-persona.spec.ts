@@ -23,7 +23,7 @@ import { prepareDesktopBrandProfile } from '../src/brand-profile.ts'
 
 const bundle = fileURLToPath(new URL('../../../packages/bundle/', import.meta.url))
 const descriptor = JSON.parse(await readFile(new URL('../brands/huigong/brand.json', import.meta.url), 'utf8')) as Record<string, unknown>
-const { icons: _icons, ...metadata } = descriptor
+const { icons: _icons, backgrounds: _backgrounds, ...metadata } = descriptor
 const brand = { ...parseDesktopBrand(metadata), personaSource: 'local' as const }
 const load = (path: string) => loadOverlayPatches('brand test', path)
 afterEach(() => { vi.unstubAllEnvs() })

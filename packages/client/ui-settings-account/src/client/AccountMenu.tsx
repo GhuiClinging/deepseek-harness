@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   Toast, Menu, IconEllipsisOutlineMedium, IconPaperPlaneOutlineMedium, IconSettingsOutlineMedium, IconUserOutlineMedium,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type { InjectFace, PropsLocale, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { AccountSectionInjected } from './AccountSection.tsx'
 import { SignOutDialog } from './SignOutDialog.tsx'
 import { SignInDialog } from './SignInDialog.tsx'
@@ -13,14 +13,16 @@ import { AccountNoticeStack } from './AccountNotice.tsx'
 import css from './AccountMenu.module.css'
 
 /** Account launcher composed by the settings shell. */
-export type AccountMenuProps = PropsRuntime<'settings.launcher'> & PropsLocale<'settings.account'> & InjectFace<AccountSectionInjected>
+export type AccountMenuProps = PropsRuntime<'settings.launcher'> & PropsLocale<'settings.account'>
+  & Partial<Pick<PropsRenderSlots<'settings.launcher.identity'>, 'renderSlot'>> & InjectFace<AccountSectionInjected>
 
 /** The signed-in label stays empty while the profile loads.
  * @param props - sidebar geometry, settings navigation and account operations.
  * @returns account menu launcher.
  */
 export function AccountMenu({
-  subscribeSessionExpired, subscribeModelSignInRequired, wide, settingsShortcut, openSettings, openOnboarding, settingsOpen,
+  subscribeSessionExpired, subscribeModelSignInRequired, wide, showLocalProfile = false, renderSlot,
+  settingsShortcut, openSettings, openOnboarding, settingsOpen,
   useAccount, useTheme, signOut, hasRunningAccountTasks, refreshAccount, bonusNoticeShown, bonusNoticeDismissed,
   contactUs, showLogin, start, cancel, avatarFailed, t,
 }: AccountMenuProps) {
@@ -35,6 +37,7 @@ export function AccountMenu({
   const account = useAccount(state => state)
   const colorScheme = useTheme(snapshot => snapshot.active.colorScheme)
   const signedIn = account.view?.status === 'credential-stored'
+  const showProfileIdentity = showLocalProfile && renderSlot !== undefined
   const [signInNotice, setSignInNotice] = useState(0)
   useEffect(() => subscribeModelSignInRequired?.(() => { setSignInNotice(value => value + 1) }), [subscribeModelSignInRequired])
   const [expiryNotice, setExpiryNotice] = useState(false)
@@ -54,6 +57,14 @@ export function AccountMenu({
   }
   // The plugin's start publishes `loginFailed` before it rejects, so the dialog owns the report.
   const beginSignIn = (): void => { setOpen(false); void start().catch(() => undefined) }
+  const launcherFallback = <>
+    {signedIn
+      ? <span className={css.avatar} data-avatar-status={account.avatar?.status}>
+        <AccountAvatar avatar={account.avatar} avatarFailed={avatarFailed} />
+      </span>
+      : <IconEllipsisOutlineMedium size={14} />}
+    {wide && <span className={css.label}>{signedIn ? label : t('more')}</span>}
+  </>
   return <div ref={anchor} className={css.root} data-inset={signedIn && wide}>
     {signInNotice > 0 && <Toast key={signInNotice} text={t('modelSignInRequired')} onDone={() => { setSignInNotice(0) }} />}
     {expiryNotice && <Toast text={t('sessionExpired')} onDone={() => { setExpiryNotice(false) }} />}
@@ -62,14 +73,12 @@ export function AccountMenu({
       anchor={anchor} title={t('bonusNoticeTitle')} closeLabel={t('close')}
       onShown={bonusNoticeShown} onDismiss={bonusNoticeDismissed} />}
     <Menu open={open} side="top" portal autoFocus className={css.anchor} listClassName={signedIn ? undefined : css.signedOutMenu}
-      anchor={<button ref={trigger} type="button" className={css.trigger} data-collapsed={!wide} data-signed-out={!signedIn} aria-label={t('menu')}
+      anchor={<button ref={trigger} type="button" className={css.trigger} data-collapsed={!wide} data-signed-out={!signedIn}
+        data-local-profile={showProfileIdentity} aria-label={t('menu')}
         aria-haspopup="menu" aria-expanded={open} onClick={() => { setOpen(value => !value) }}>
-        {signedIn
-          ? <span className={css.avatar} data-avatar-status={account.avatar?.status}>
-            <AccountAvatar avatar={account.avatar} avatarFailed={avatarFailed} />
-          </span>
-          : <IconEllipsisOutlineMedium size={14} />}
-        {wide && <span className={css.label}>{signedIn ? label : t('more')}</span>}
+        {showProfileIdentity
+          ? renderSlot('settings.launcher.identity', { wide }, { fallback: launcherFallback })
+          : launcherFallback}
       </button>}
       items={[
         { id: 'settings', label: t('settings'), icon: <IconSettingsOutlineMedium size={16} />,

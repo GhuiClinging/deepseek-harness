@@ -14,12 +14,31 @@
 }
 
 .title {
+  flex: 1;
+  min-width: 0;
   margin: 0;
   font-size: 20px;
   line-height: 28px;
   font-weight: 500;
   color: var(--dsw-alias-label-primary);
   outline: none;
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.close {
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: var(--dsw-radius-md);
+  color: var(--dsw-alias-label-tertiary);
+  flex: none;
+  margin: -4px -4px 0 0;
 }
 
 .body {

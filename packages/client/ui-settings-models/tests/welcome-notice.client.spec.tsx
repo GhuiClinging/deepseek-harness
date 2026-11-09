@@ -32,6 +32,7 @@ const WELCOME_NOTICE_COPY = {
 
 afterEach(() => {
   cleanup()
+  vi.unstubAllEnvs()
   document.getElementById('root')?.remove()
 })
 
@@ -116,15 +117,17 @@ describe('WelcomeNotice', () => {
     expect(zh.welcomeBody).toBe(WELCOME_NOTICE_COPY.zh.body)
   })
 
-  it('renders one blocking modal action and focuses the title', async () => {
+  it('keeps implicit dismissal blocked and focuses the title', async () => {
     const h = mount()
     const dialog = await screen.findByRole('dialog', { name: WELCOME_NOTICE_COPY.zh.title })
     for (const paragraph of WELCOME_NOTICE_COPY.zh.body.split('\n\n')) {
       expect(screen.getByText(paragraph, { exact: true })).toBeTruthy()
     }
     expect(dialog.querySelectorAll('p')).toHaveLength(2)
-    expect(dialog.querySelectorAll('button')).toHaveLength(1)
+    expect(dialog.querySelectorAll('button')).toHaveLength(2)
     expect(screen.getByRole('button', { name: WELCOME_NOTICE_COPY.zh.continueLabel })).toBeTruthy()
+    const close = screen.getByRole('button', { name: zh.close })
+    expect(dialog.querySelector('h2')?.parentElement?.contains(close)).toBe(true)
     expect(document.activeElement).toBe(screen.getByRole('heading', { name: WELCOME_NOTICE_COPY.zh.title }))
     expect(h.appRoot.inert).toBe(true)
 
@@ -132,6 +135,19 @@ describe('WelcomeNotice', () => {
     fireEvent.click(document.querySelector('[class*="mask"]')!)
     expect(h.complete).not.toHaveBeenCalled()
     expect(screen.getByRole('dialog')).toBeTruthy()
+  })
+
+  it('uses the branded product name and lets the user close without saving an acknowledgement', async () => {
+    vi.stubEnv('DSH_CLIENT_TITLE', '辉总后宫智囊团')
+    const h = mount()
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog.textContent).toContain('辉总后宫智囊团')
+    expect(dialog.textContent).not.toContain('DeepSeek Harness')
+
+    fireEvent.click(screen.getByRole('button', { name: zh.close }))
+
+    expect(h.complete).toHaveBeenCalledOnce()
+    expect(h.mutate).not.toHaveBeenCalled()
   })
 
   it('requires a fresh acknowledgement after the 0.1 notice', async () => {
@@ -153,7 +169,7 @@ describe('WelcomeNotice', () => {
     expect(h.complete).toHaveBeenCalledOnce()
   })
 
-  it('keeps the sole action disabled while saving and reports a refused write', async () => {
+  it('keeps Continue disabled while saving and reports a refused write', async () => {
     let resolveWrite!: (value: unknown) => void
     const write = new Promise<unknown>((resolve) => { resolveWrite = resolve })
     const h = mount(undefined, () => write)

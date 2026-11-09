@@ -5,6 +5,7 @@ import * as HostPlugin from '../src/index.ts'
 import { liveConfig, omitsGeneratedPage } from '../../../settings/settings/tests/live-config.ts'
 import { plainConfig } from '../../../settings/settings/src/schema.ts'
 import * as General from '../src/index.ts'
+import { resolveBackgroundLayout } from '../src/appearance/preferences.ts'
 
 it('validates and updates onboarding preferences without remounting', async () => {
   const ctx = new Context()
@@ -44,4 +45,14 @@ it('keeps photographic presentation opt-in and validates bounded live folder pre
   expect(() => General.Config({ backgroundFolder: 'bad\0path' })).toThrow()
   expect(() => General.Config({ backgroundMinSeconds: 0 })).toThrow()
   expect(() => General.Config({ backgroundMaxSeconds: 86401 })).toThrow()
+})
+
+it('accepts saved regional placement and rejects external or executable image references', () => {
+  const layout = resolveBackgroundLayout({ backgroundFolder: '', backgroundMinSeconds: 300, backgroundMaxSeconds: 900 })
+  expect(General.Config({ backgroundLayout: layout }).backgroundLayout.get()).toEqual(layout)
+  for (const image of ['https://example.com/image.png', 'data:image/svg+xml,<svg/>']) {
+    expect(() => General.Config({ backgroundLayout: { ...layout, sidebar: { ...layout.sidebar, image } } })).toThrow()
+  }
+  expect(() => General.Config({ backgroundLayout: { ...layout, unified: { ...layout.unified, opacity: 101 } } })).toThrow()
+  expect(() => General.Config({ backgroundLayout: { ...layout, chat: { ...layout.chat, zoom: 0 } } })).toThrow()
 })

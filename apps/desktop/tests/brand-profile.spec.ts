@@ -7,7 +7,7 @@ import { parseDesktopBrand } from '../src/brand.ts'
 import { desktopBrandPaths, desktopBrandFromManifest, desktopBrandPresentation, prepareDesktopBrandProfile } from '../src/brand-profile.ts'
 
 const descriptor = JSON.parse(await readFile(new URL('../brands/huigong/brand.json', import.meta.url), 'utf8')) as Record<string, unknown>
-const { icons: _icons, ...metadata } = descriptor
+const { icons: _icons, backgrounds: _backgrounds, ...metadata } = descriptor
 const brand = { ...parseDesktopBrand(metadata), personaSource: 'local' as const }
 
 describe('desktop brand runtime profile', () => {
@@ -15,15 +15,15 @@ describe('desktop brand runtime profile', () => {
     const home = await mkdtemp(join(tmpdir(), 'dsh-brand-photo-'))
     const pictured = { ...brand, logo: '/api/brand-appearance/logo' as const }
     const prepared = await prepareDesktopBrandProfile(pictured, home, '/packaged/brand-assets')
+    expect(prepared.appearanceAssetsDirectory).toBe('/packaged/brand-assets')
     const path = join(home, 'integrations', 'dsh-im', 'sidebar-settings.json')
     expect(JSON.parse(await readFile(path, 'utf8'))).toEqual({ version: 1, mode: 'show' })
     const patch = JSON.parse(await readFile(prepared.patchPath, 'utf8')) as { id: string; disabled?: boolean; config?: object }[]
     expect(patch.find(row => row.id === 'theme-seabreeze')?.disabled).toBe(true)
-    expect(patch.find(row => row.id === 'ui-settings-general')?.config).toEqual({
-      brandAppearance: true, brandAssetsDirectory: '/packaged/brand-assets',
-    })
+    expect(patch.some(row => row.id === 'ui-settings-general')).toBe(false)
     await writeFile(path, '{"version":1,"mode":"hide"}')
-    await prepareDesktopBrandProfile(pictured, home, '/packaged/brand-assets')
+    const regenerated = await prepareDesktopBrandProfile(pictured, home, '/packaged/brand-assets')
+    expect(regenerated.appearanceAssetsDirectory).toBe('/packaged/brand-assets')
     expect(await readFile(path, 'utf8')).toBe('{"version":1,"mode":"hide"}')
   })
   it('retains the unselected identity and rejects malformed selected metadata', () => {
@@ -52,8 +52,11 @@ describe('desktop brand runtime profile', () => {
     expect(second.personaPrefix).toContain(edited.name)
     expect(second.personaPrefix).toContain(`称呼用户为${edited.address}`)
     expect(patches.some(row => row.id === 'system-prompt')).toBe(false)
-    for (const id of ['deepseek-account', 'llm-deepseek-account', 'account-controller', 'ui-settings-account', 'product-analytics', 'desktop-product-telemetry', 'session-telemetry-otel']) {
+    for (const id of ['product-analytics', 'desktop-product-telemetry', 'session-telemetry-otel']) {
       expect(patches.find(row => row.id === id)?.disabled).toBe(true)
+    }
+    for (const id of ['deepseek-account', 'llm-deepseek-account', 'account-controller', 'ui-settings-account']) {
+      expect(patches.some(row => row.id === id)).toBe(false)
     }
     expect(await readFile(userPatch, 'utf8')).toBe('# user plugin edits\n')
     expect(await readFile(join(home, '.credentials.yaml'), 'utf8')).toBe('private fixture\n')

@@ -16,6 +16,9 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     /** Optional sidebar account launcher; opens the shell-owned settings panel. */
     'settings.launcher': { kind: 'single'; scope: 'root'; owner: SettingsLauncherOwnerProps }
 
+    /** Optional branded local identity rendered inside the account launcher. */
+    'settings.launcher.identity': { kind: 'single'; scope: 'root'; owner: SettingsTriggerOwnerProps }
+
     /**
      * The sidebar-foot trigger row content: icon + label, supplied as slot
      * content (the accessible name comes from the content — rail state
@@ -162,6 +165,8 @@ export interface SettingsLauncherOwnerProps {
   wide: boolean
   /** Whether the settings dialog covers the sidebar; a launcher may treat a false-to-true edge as one Settings entry. */
   settingsOpen: boolean
+  /** Whether a branded build replaces the launcher identity with its local profile. */
+  showLocalProfile?: boolean
   /** Effective Settings key labels and accessible combination; omitted when unbound. */
   settingsShortcut?: { readonly keys: readonly string[]; readonly aria?: string | undefined }
   /** Open the settings panel. */

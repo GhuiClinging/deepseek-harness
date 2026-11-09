@@ -9,7 +9,7 @@ export interface DesktopBrandPresentation {
   readonly wordmark: string
   readonly mark: string
   readonly logo?: '/api/brand-appearance/logo'
-  readonly authenticationMode: 'api-key'
+  readonly authenticationMode: 'account'
   readonly updates: 'manual'
   readonly persona: Pick<DesktopBrandPersona, 'name' | 'address' | 'greeting'>
 }
@@ -45,7 +45,7 @@ export function desktopBrandPaths(
 export function desktopBrandPresentation(brand: DesktopBrand, persona: DesktopBrandPersona): DesktopBrandPresentation {
   return Object.freeze({ name: brand.name, wordmark: brand.wordmark, mark: brand.mark,
     ...(brand.logo === undefined ? {} : { logo: brand.logo }),
-    authenticationMode: 'api-key', updates: 'manual',
+    authenticationMode: 'account', updates: 'manual',
     persona: Object.freeze({ name: persona.name, address: persona.address, greeting: persona.greeting }) })
 }
 
@@ -62,6 +62,7 @@ export async function prepareDesktopBrandProfile(brand: DesktopBrand, home: stri
   personaPath: string
   patchPath: string
   personaPrefix: string
+  appearanceAssetsDirectory: string | undefined
 }> {
   await mkdir(home, { recursive: true })
   const personaPath = join(home, 'persona.json')
@@ -75,10 +76,8 @@ export async function prepareDesktopBrandProfile(brand: DesktopBrand, home: stri
     } catch (error) { throw new Error(`desktop brand: invalid persona.json at ${personaPath}; correct the file and restart`, { cause: error }) }
   }
   const prefix = `你是${persona.name}，称呼用户为${persona.address}。\n${persona.instructions}\n完成事务时的语气示例：${persona.completion}`
-  const patches = [
-    ...['deepseek-account', 'llm-deepseek-account', 'account-controller', 'ui-settings-account',
-      'product-analytics', 'desktop-product-telemetry', 'session-telemetry-otel'].map(id => ({ id, disabled: true })),
-  ]
+  const patches = ['product-analytics', 'desktop-product-telemetry', 'session-telemetry-otel']
+    .map(id => ({ id, disabled: true }))
   if (brand.logo !== undefined) {
     const preferencesDirectory = join(home, 'integrations', 'dsh-im')
     await mkdir(preferencesDirectory, { recursive: true })
@@ -93,9 +92,7 @@ export async function prepareDesktopBrandProfile(brand: DesktopBrand, home: stri
     patches.push({ id: 'theme-seabreeze', disabled: true })
   }
   const patchPath = join(home, 'desktop-brand.patch.json')
-  const rows = brand.logo === undefined ? patches : [...patches, {
-    id: 'ui-settings-general', config: { brandAppearance: true, brandAssetsDirectory: assetsDirectory },
-  }]
-  await writeFile(patchPath, `${JSON.stringify(rows, null, 2)}\n`, { mode: 0o600 })
-  return { persona, personaPath, patchPath, personaPrefix: prefix }
+  await writeFile(patchPath, `${JSON.stringify(patches, null, 2)}\n`, { mode: 0o600 })
+  return { persona, personaPath, patchPath, personaPrefix: prefix,
+    appearanceAssetsDirectory: brand.logo === undefined || assetsDirectory === '' ? undefined : assetsDirectory }
 }

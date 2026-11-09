@@ -32,6 +32,8 @@ async function main(): Promise<void> {
   const brandProfile = desktopBrandProfileOptions(process.env)
   if (brandProfile.personaPrefix === undefined) delete process.env.DSH_DESKTOP_PERSONA_PREFIX
   else process.env.DSH_DESKTOP_PERSONA_PREFIX = brandProfile.personaPrefix
+  if (brandProfile.appearanceAssetsDirectory === undefined) delete process.env.DSH_BRAND_ASSETS_DIRECTORY
+  else process.env.DSH_BRAND_ASSETS_DIRECTORY = brandProfile.appearanceAssetsDirectory
   const application = runProfile({
     environment: loadLayeredEnv('dsh'),
     profile: 'desktop',

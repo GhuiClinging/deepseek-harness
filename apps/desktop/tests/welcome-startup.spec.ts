@@ -315,7 +315,7 @@ it.each([false, true])('starts welcome onboarding without carrying update focus 
 })
 
 
-it('isolates selected identity before cache reads and skips native account streams and upstream CLI', async () => {
+it('isolates selected identity before cache reads while retaining account sign-in and omitting upstream CLI', async () => {
   vi.resetModules()
   vi.clearAllMocks()
   const brand = { id: 'huigong', name: '辉总后宫智囊团', wordmark: '辉总 · 后宫智囊团', appId: 'com.guohui.huigong', protocol: 'huigong', storageNamespace: 'huigong', mark: '辉',
@@ -335,11 +335,9 @@ it('isolates selected identity before cache reads and skips native account strea
   expect(state.setName).toHaveBeenCalledWith('辉总后宫智囊团')
   expect(state.setPath).toHaveBeenCalledWith('userData', join('/development-appData', 'huigong'))
   expect(process.env.DSH_HOME).toBe(join('/development-home', '.huigong'))
-  expect(state.accountListener).toBeUndefined()
   const operations = (): WelcomeOperations | undefined => state.operations
-  expect(operations()?.authenticationMode).toBe('api-key')
-  await expect(state.operations!.startSignIn()).rejects.toThrow('unavailable')
-  expect(state.accountState).not.toHaveBeenCalled()
+  expect(operations()?.authenticationMode).toBe('account')
+  expect(state.accountListener).toBeDefined()
   const templates = state.menu.mock.calls.flatMap(([template]) => template as Array<{ submenu?: Array<{ label?: string }> }>)
   const menuItems = templates.flatMap(item => item.submenu ?? [])
   expect(menuItems.some(item => item.label === state.welcomeLocale?.messages.cliCommandMenu)).toBe(false)

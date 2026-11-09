@@ -27,7 +27,7 @@ type WelcomeEventName = 'auth_page_view' | 'auth_page_click' | 'api_key_save_cli
 
 /** Host-owned operations used by the welcome window. */
 export interface WelcomeOperations {
-  /** Brand installations permit API keys only; omitted values retain upstream account onboarding. */
+  /** Select account sign-in plus API-key entry, or API-key entry alone. */
   readonly authenticationMode?: 'account' | 'api-key'
   /** Public identity and current role copy; no instructions or credentials. */
   readonly presentation?: { readonly name: string; readonly wordmark: string; readonly mark: string; readonly greeting: string }

@@ -50,7 +50,7 @@ describe('minimal HuiGong persona', () => {
   it('persists the shipped preset persona in the model request', async () => {
     if (MODE === 'record') throw new Error('the authored HuiGong fixture supports keyless replay and refresh only')
     const descriptor = JSON.parse(await readFile(new URL('../../desktop/brands/huigong/brand.json', import.meta.url), 'utf8')) as Record<string, unknown>
-    const { icons: _icons, ...metadata } = descriptor
+    const { icons: _icons, backgrounds: _backgrounds, ...metadata } = descriptor
     const brand = parseDesktopBrand(metadata)
     const originalPrefix = process.env.DSH_DESKTOP_PERSONA_PREFIX
     let scaffold: WebScaffold | undefined

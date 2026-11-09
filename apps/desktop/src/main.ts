@@ -413,9 +413,18 @@ async function main(): Promise<void> {
   })
   let hostEnvironment: NodeJS.ProcessEnv = process.env
   const prepareHostEnvironment = async (): Promise<void> => {
-    const { DSH_DESKTOP_BRAND_PATCH: _patch, DSH_DESKTOP_PERSONA_PREFIX: _prefix, ...environment } = await loginShell
+    const {
+      DSH_DESKTOP_BRAND_PATCH: _patch,
+      DSH_DESKTOP_PERSONA_PREFIX: _prefix,
+      DSH_BRAND_ASSETS_DIRECTORY: _assetsDirectory,
+      ...environment
+    } = await loginShell
     hostEnvironment = { ...environment, ...(brandProfile === undefined ? {} : {
-      DSH_DESKTOP_BRAND_PATCH: brandProfile.patchPath, DSH_DESKTOP_PERSONA_PREFIX: brandProfile.personaPrefix,
+      DSH_DESKTOP_BRAND_PATCH: brandProfile.patchPath,
+      DSH_DESKTOP_PERSONA_PREFIX: brandProfile.personaPrefix,
+      ...(brandProfile.appearanceAssetsDirectory === undefined ? {} : {
+        DSH_BRAND_ASSETS_DIRECTORY: brandProfile.appearanceAssetsDirectory,
+      }),
     }) }
   }
   let quitting = false
@@ -576,14 +585,13 @@ async function main(): Promise<void> {
           .catch((error: unknown) => { console.error('desktop: legacy Host cookie cleanup failed', error) })
         if (ready.injections === undefined) throw new Error('Desktop Host did not provide boot injections')
         injections = ready.injections
-        welcomeBackend = desktopBrand === undefined ? connectDesktopWelcome(ready.url, cookie)
-          : connectDesktopWelcome(ready.url, cookie, undefined, 'api-key')
+        welcomeBackend = connectDesktopWelcome(ready.url, cookie)
         analyticsEnabled = await welcomeBackend.analyticsEnabled().catch(() => false)
         if (isStopped()) return
         if (!reportedLaunch) { reportedLaunch = true; void track('desktop_app_launch', {}) }
         stopAccount?.()
         const accountBackend = welcomeBackend.account
-        if (desktopBrand === undefined && accountBackend !== undefined) stopAccount = accountBackend.watch((state) => {
+        if (accountBackend !== undefined) stopAccount = accountBackend.watch((state) => {
           if (quitting) return
           if (welcomeWindow !== undefined && !welcomeWindow.isDestroyed()) welcomeWindow.webContents.send(WELCOME_IPC.state, state)
           const attempt = state.attempt
@@ -1411,7 +1419,7 @@ async function main(): Promise<void> {
           name: brandPresentation.name, wordmark: brandPresentation.wordmark, mark: brandPresentation.mark,
           greeting: brandPresentation.persona.greeting,
         } }),
-        authenticationMode: desktopBrand === undefined ? 'account' : 'api-key',
+        authenticationMode: 'account',
         analytics: track,
         analyticsEnabled: () => Promise.resolve(analyticsEnabled),
         takeNotice: () => {
@@ -1420,11 +1428,11 @@ async function main(): Promise<void> {
           return Promise.resolve(notice)
         },
         startSignIn: async () => {
-          if (welcomeBackend?.account === undefined || desktopBrand !== undefined) throw new Error('desktop welcome: account unavailable')
+          if (welcomeBackend?.account === undefined) throw new Error('desktop welcome: account unavailable')
           return welcomeBackend.account.start(desktopClientMetadata(locale.id))
         },
         cancelSignIn: async (id) => {
-          if (welcomeBackend?.account === undefined || desktopBrand !== undefined) throw new Error('desktop welcome: account unavailable')
+          if (welcomeBackend?.account === undefined) throw new Error('desktop welcome: account unavailable')
           return welcomeBackend.account.cancel(id)
         },
         copySignInLink: async (id) => {

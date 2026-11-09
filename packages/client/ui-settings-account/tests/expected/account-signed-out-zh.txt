@@ -1,1 +1,1 @@
-当前未登录 DeepSeek Harness 账号登录 DeepSeek Harness 账号获取专属 API Key登录
+当前尚未登录 DeepSeek 账号登录 DeepSeek 账号即可使用官方模型。登录

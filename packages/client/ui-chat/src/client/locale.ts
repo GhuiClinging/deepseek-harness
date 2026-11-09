@@ -5,7 +5,7 @@ export const NS = 'chat'
 
 /** Simplified Chinese dictionary and key-set source of truth. */
 export const zh = {
-  'message.stepProcess.thinking': '正在分析请求',
+  'message.stepProcess.thinking': '彤答应头脑风暴中…',
   'message.stepProcess.read': '正在读取文件',
   'message.stepProcess.readImage': '正在读取图片',
   'message.stepProcess.write': '正在写入文件',
@@ -92,8 +92,8 @@ export const zh = {
   'chat.loadError': '历史加载失败：{message}（{code}）',
   'chat.loadOlder': '加载更早',
   'chat.toBottom': '回到底部',
-  'chat.deepDiving': '深度求索中',
-  'chat.deepDivingFor': '深度求索中，用时 {duration} ···',
+  'chat.deepDiving': '彤答应头脑风暴中',
+  'chat.deepDivingFor': '彤答应头脑风暴中，用时 {duration} ···',
   'chat.turnNavigation.label': '轮次导航',
   'chat.turnNavigation.jump': '跳转到第 {turn} 轮',
   'chat.turnNavigation.jumpLoad': '加载并跳转到第 {turn} 轮',
@@ -213,7 +213,7 @@ export type ChatKey = keyof typeof zh
 
 /** English dictionary, checked against the Chinese key set. */
 export const en = {
-  'message.stepProcess.thinking': 'Analyzing the request',
+  'message.stepProcess.thinking': 'Tong is brainstorming…',
   'message.stepProcess.read': 'Reading files',
   'message.stepProcess.readImage': 'Reading images',
   'message.stepProcess.write': 'Writing files',
@@ -418,7 +418,7 @@ export const en = {
 
 /** Japanese copy, checked against the English keys. */
 export const ja = {
-  'message.stepProcess.thinking': 'リクエストを分析中',
+  'message.stepProcess.thinking': '彤答应が頭脳フル回転中…',
   'message.stepProcess.read': 'ファイルを読み取り中',
   'message.stepProcess.readImage': '画像を読み取り中',
   'message.stepProcess.write': 'ファイルを書き込み中',
@@ -623,7 +623,7 @@ export const ja = {
 
 /** Spanish dictionary, checked against the English keys. */
 export const es = {
-  'message.stepProcess.thinking': 'Analizando la solicitud',
+  'message.stepProcess.thinking': '彤答应 está haciendo una lluvia de ideas…',
   'message.stepProcess.read': 'Leyendo archivos',
   'message.stepProcess.readImage': 'Leyendo imágenes',
   'message.stepProcess.write': 'Escribir archivos',
@@ -828,7 +828,7 @@ export const es = {
 
 /** French dictionary, checked against the English keys. */
 export const fr = {
-  'message.stepProcess.thinking': 'Analyser la demande',
+  'message.stepProcess.thinking': '彤答应 réfléchit à toute vitesse…',
   'message.stepProcess.read': 'Lecture de fichiers',
   'message.stepProcess.readImage': 'Lire des images',
   'message.stepProcess.write': 'Écriture de fichiers',
@@ -1033,7 +1033,7 @@ export const fr = {
 
 /** German dictionary, checked against the English keys. */
 export const de = {
-  'message.stepProcess.thinking': 'Analyse der Anfrage',
+  'message.stepProcess.thinking': '彤答应 sammelt gerade Ideen…',
   'message.stepProcess.read': 'Dateien lesen',
   'message.stepProcess.readImage': 'Bilder lesen',
   'message.stepProcess.write': 'Dateien schreiben',
@@ -1238,7 +1238,7 @@ export const de = {
 
 /** Russian dictionary, checked against the English keys. */
 export const ru = {
-  'message.stepProcess.thinking': 'Анализ запроса',
+  'message.stepProcess.thinking': '彤答应 устраивает мозговой штурм…',
   'message.stepProcess.read': 'Чтение файлов',
   'message.stepProcess.readImage': 'Чтение изображений',
   'message.stepProcess.write': 'Запись файлов',
@@ -1443,7 +1443,7 @@ export const ru = {
 
 /** Portuguese dictionary, checked against the English keys. */
 export const pt = {
-  'message.stepProcess.thinking': 'Analisando a solicitação',
+  'message.stepProcess.thinking': '彤答应 está fazendo uma sessão de ideias…',
   'message.stepProcess.read': 'Lendo arquivos',
   'message.stepProcess.readImage': 'Lendo imagens',
   'message.stepProcess.write': 'Gravando arquivos',

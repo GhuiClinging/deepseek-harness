@@ -39,7 +39,7 @@ function record(value: unknown): value is Record<string, unknown> {
  * @param hostUrl - URL of the running Desktop Host; only its origin is used.
  * @param cookie - Cookie header returned by `authenticateWebHost` for this Host.
  * @param send - HTTP client for Host requests.
- * @param authenticationMode - brand API-key mode omits all account and analytics operations.
+ * @param authenticationMode - API-key-only mode omits account and analytics operations.
  * @returns metadata reads and write-only credential operations over standard RPC.
  */
 export function connectDesktopWelcome(

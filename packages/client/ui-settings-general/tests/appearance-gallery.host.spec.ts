@@ -55,3 +55,51 @@ it('uses bundled backgrounds when no external folder is selected and serves the 
   expect(logo.status).toBe(200)
   expect(logo.headers.get('content-type')).toBe('image/png')
 })
+
+it('keeps portrait and landscape images in separate inventories that remain readable together', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'brand-gallery-regions-'))
+  for (const directory of ['horizontal', 'vertical']) {
+    await mkdir(join(root, directory))
+    await writeFile(join(root, directory, 'photo.jpg'), Buffer.concat([jpeg, Buffer.from(directory)]))
+  }
+  const gallery = new AppearanceGallery(() => ({ folder: root, builtinDirectory: '' }))
+  const chat = await gallery.catalog('chat')
+  const sidebar = await gallery.catalog('sidebar')
+  expect(chat.images).toHaveLength(1)
+  expect(sidebar.images).toHaveLength(1)
+  expect(sidebar.images).not.toEqual(chat.images)
+  for (const [catalog, directory] of [[chat, 'horizontal'], [sidebar, 'vertical']] as const) {
+    const response = await gallery.image(new Request(`http://local${catalog.images[0]}`))
+    expect(response.status).toBe(200)
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(Buffer.concat([jpeg, Buffer.from(directory)]))
+  }
+})
+
+it('reports a missing or linked orientation folder without using photographs from the other orientation', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'brand-gallery-missing-region-'))
+  await mkdir(join(root, 'horizontal'))
+  await writeFile(join(root, 'horizontal', 'photo.jpg'), jpeg)
+  const gallery = new AppearanceGallery(() => ({ folder: root, builtinDirectory: '' }))
+  expect(await gallery.catalog('sidebar')).toEqual({ images: [], unavailable: true })
+  await symlink(join(root, 'horizontal'), join(root, 'vertical'))
+  expect(await gallery.catalog('sidebar')).toEqual({ images: [], unavailable: true })
+})
+
+it('keeps concurrent draft previews separate from active images and bounds retained inventories', async () => {
+  const active = await mkdtemp(join(tmpdir(), 'brand-gallery-active-'))
+  const draft = await mkdtemp(join(tmpdir(), 'brand-gallery-draft-'))
+  await writeFile(join(active, 'active.jpg'), jpeg)
+  await writeFile(join(draft, 'draft.jpg'), Buffer.concat([jpeg, Buffer.from('draft')]))
+  const gallery = new AppearanceGallery(() => ({ folder: active, builtinDirectory: '' }))
+  const accepted = await gallery.catalog('sidebar')
+  const preview = await gallery.preview('sidebar', draft)
+  expect(preview.images).toHaveLength(1)
+  expect(preview.images).not.toEqual(accepted.images)
+  const request = new Request(`http://local${preview.images[0]}`)
+  expect(Buffer.from(await (await gallery.image(request)).arrayBuffer())).toEqual(Buffer.concat([jpeg, Buffer.from('draft')]))
+  expect((await gallery.catalog('sidebar')).images).toEqual(accepted.images)
+  expect(await gallery.preview('sidebar', join(draft, 'missing'))).toEqual({ images: [], unavailable: true })
+  expect((await gallery.image(request)).status).toBe(200)
+  for (let index = 0; index < 8; index++) await gallery.preview('sidebar', active)
+  expect((await gallery.image(request)).status).toBe(404)
+})

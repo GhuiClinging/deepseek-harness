@@ -30,6 +30,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  vi.unstubAllGlobals()
   if (scrollIntoViewDescriptor === undefined) Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
   else Object.defineProperty(Element.prototype, 'scrollIntoView', scrollIntoViewDescriptor)
   vi.useRealTimers()
@@ -515,13 +516,20 @@ it('explicitly reopens one onboarding editor during an existing session', () => 
 it('opens Account from the contributed sidebar launcher', () => {
   const { renderSlot } = mount({ rows: [{ id: 'account', order: -10, label: 'Account' }] })
   const launcher = renderSlot.mock.calls.find(call => call[0] === 'settings.launcher')!
-  expect(launcher[1]).toMatchObject({ settingsOpen: false })
+  expect(launcher[1]).toMatchObject({ settingsOpen: false, showLocalProfile: false })
   act(() => { (launcher[1] as { openSettings: () => void }).openSettings() })
   expect(screen.getByTestId('section-account')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Account' }).querySelector('svg')).not.toBeNull()
   expect(renderSlot.mock.calls.filter(call => call[0] === 'settings.launcher').at(-1)?.[1]).toMatchObject({ settingsOpen: true })
   fireEvent.keyDown(document, { key: 'Escape' })
   expect(renderSlot.mock.calls.filter(call => call[0] === 'settings.launcher').at(-1)?.[1]).toMatchObject({ settingsOpen: false })
+})
+
+it('marks the account launcher to display the local profile in branded clients', () => {
+  vi.stubGlobal('dshDesktopBrand', { name: '辉总后宫智囊团' })
+  const { renderSlot } = mount()
+  const launcher = renderSlot.mock.calls.find(call => call[0] === 'settings.launcher')!
+  expect(launcher[1]).toMatchObject({ showLocalProfile: true })
 })
 
 it('shows the effective settings binding on focus and exposes it to assistive technology', () => {

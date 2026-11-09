@@ -3288,7 +3288,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     ],
     replaceRisk: 'none',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'settings.action\', () => ctx.slots.register(\n      { name: \'settings.action\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-settings/src/client/contract/slots.ts:39',
+    source: 'packages/client/ui-settings/src/client/contract/slots.ts:42',
   },
   {
     key: 'settings.close',
@@ -3322,7 +3322,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     ],
     replaceRisk: 'shadows-shipped-ui',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'settings.close\', () => ctx.slots.register(\n      { name: \'settings.close\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-settings/src/client/contract/slots.ts:45',
+    source: 'packages/client/ui-settings/src/client/contract/slots.ts:48',
   },
   {
     key: 'settings.general.item',
@@ -3379,7 +3379,6 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
       'client-ui-permission-presets PermissionRow id \'permission\'',
       'client-ui-settings-general DeveloperToolsRow id \'developer-tools\'',
       'client-ui-settings-general CurrentVersionRow id \'current-version\'',
-      'client-ui-settings-general AppearanceEditor id \'brand-appearance\'',
       'client-ui-settings-general LocalProfileEditor id \'local-profile\'',
       'client-ui-settings-general DesktopChannelRow id \'desktop-update-channel\'',
       'client-ui-settings-session-log UploadRow',
@@ -3389,7 +3388,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     ],
     replaceRisk: 'none',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'settings.general.item\', () => ctx.slots.register(\n      { name: \'settings.general.item\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-settings/src/client/contract/slots.ts:100',
+    source: 'packages/client/ui-settings/src/client/contract/slots.ts:103',
   },
   {
     key: 'settings.header',
@@ -3423,7 +3422,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     ],
     replaceRisk: 'shadows-shipped-ui',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'settings.header\', () => ctx.slots.register(\n      { name: \'settings.header\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-settings/src/client/contract/slots.ts:33',
+    source: 'packages/client/ui-settings/src/client/contract/slots.ts:36',
   },
   {
     key: 'settings.launcher',
@@ -3433,7 +3432,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     doc: 'Optional sidebar account launcher; opens the shell-owned settings panel.',
     registerOptions: [],
     ownerProps: [
-      '/** Sidebar launcher geometry and settings navigation. */\nexport interface SettingsLauncherOwnerProps {\n  /** Whether the sidebar shows labels. */\n  wide: boolean\n  /** Whether the settings dialog covers the sidebar; a launcher may treat a false-to-true edge as one Settings entry. */\n  settingsOpen: boolean\n  /** Effective Settings key labels and accessible combination; omitted when unbound. */\n  settingsShortcut?: { readonly keys: readonly string[]; readonly aria?: string | undefined }\n  /** Open the settings panel. */\n  openSettings: () => void\n  /** @param id - registered onboarding editor to open explicitly. */\n  openOnboarding: (id: string) => void\n}',
+      '/** Sidebar launcher geometry and settings navigation. */\nexport interface SettingsLauncherOwnerProps {\n  /** Whether the sidebar shows labels. */\n  wide: boolean\n  /** Whether the settings dialog covers the sidebar; a launcher may treat a false-to-true edge as one Settings entry. */\n  settingsOpen: boolean\n  /** Whether a branded build replaces the launcher identity with its local profile. */\n  showLocalProfile?: boolean\n  /** Effective Settings key labels and accessible combination; omitted when unbound. */\n  settingsShortcut?: { readonly keys: readonly string[]; readonly aria?: string | undefined }\n  /** Open the settings panel. */\n  openSettings: () => void\n  /** @param id - registered onboarding editor to open explicitly. */\n  openOnboarding: (id: string) => void\n}',
     ],
     ownerPropsReferences: [],
     standardProps: [
@@ -3458,6 +3457,40 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     replaceRisk: 'shadows-shipped-ui',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'settings.launcher\', () => ctx.slots.register(\n      { name: \'settings.launcher\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
     source: 'packages/client/ui-settings/src/client/contract/slots.ts:17',
+  },
+  {
+    key: 'settings.launcher.identity',
+    kind: 'single',
+    scope: 'root',
+    summary: 'Optional branded local identity rendered inside the account launcher.',
+    doc: 'Optional branded local identity rendered inside the account launcher.',
+    registerOptions: [],
+    ownerProps: [
+      '/** Owner share of the trigger content seat: the sidebar column state. */\nexport interface SettingsTriggerOwnerProps {\n  /** Whether the sidebar renders wide content (false = 56px rail, icon only). */\n  wide: boolean\n}',
+    ],
+    ownerPropsReferences: [],
+    standardProps: [
+      'useRemoteAccess: (action: RemoteEndpoint) => boolean',
+      'useResource: UseResource',
+      'useContextMenu: UseContextMenu',
+      'useWorkspaces: SnapshotSelectorHook<WorkspaceSnapshot>',
+      'usePanelInfo: UsePanelInfo',
+      'useSessions: UseSessions',
+      'useSessionStatus: UseSessionStatus',
+      'useSessionRetainInfo: UseSessionRetainInfo',
+      'useSessionAccess: (sessionId: SessionId, action: RemoteEndpoint) => boolean',
+      'useWorkspaceAccess: (workspaceId: WorkspaceId, action: RemoteEndpoint) => boolean',
+    ],
+    keyDomain: '',
+    hookContext: '',
+    slotInject: '',
+    declaredBy: 'an entry in \'settings.launcher\' (client-ui-settings-account), so it exists while that entry is mounted',
+    occupants: [
+      'client-ui-settings-general LocalProfileTrigger',
+    ],
+    replaceRisk: 'shadows-shipped-ui',
+    example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'settings.launcher.identity\', () => ctx.slots.register(\n      { name: \'settings.launcher.identity\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+    source: 'packages/client/ui-settings/src/client/contract/slots.ts:20',
   },
   {
     key: 'settings.models.footer',
@@ -3635,7 +3668,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     ],
     replaceRisk: 'none',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'settings.onboarding\', () => ctx.slots.register(\n      { name: \'settings.onboarding\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-settings/src/client/contract/slots.ts:85',
+    source: 'packages/client/ui-settings/src/client/contract/slots.ts:88',
   },
   {
     key: 'settings.plugins.tab',
@@ -3688,7 +3721,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     ],
     replaceRisk: 'none',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'settings.plugins.tab\', () => ctx.slots.register(\n      { name: \'settings.plugins.tab\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-settings/src/client/contract/slots.ts:74',
+    source: 'packages/client/ui-settings/src/client/contract/slots.ts:77',
   },
   {
     key: 'settings.section',
@@ -3739,13 +3772,14 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     occupants: [
       'client-ui-agent-preset AgentPresetSection id \'agent-presets\'',
       'client-ui-settings-account AccountSection id \'account\'',
+      'client-ui-settings-general AppearanceEditor id \'brand-appearance\'',
       'client-ui-settings-general GeneralSection id \'general\'',
       'client-ui-settings-models ModelsSection id \'models\'',
       'client-ui-settings-plugins PluginsSettingsSection id \'plugins\'',
     ],
     replaceRisk: 'none',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'settings.section\', () => ctx.slots.register(\n      { name: \'settings.section\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-settings/src/client/contract/slots.ts:57',
+    source: 'packages/client/ui-settings/src/client/contract/slots.ts:60',
   },
   {
     key: 'settings.section.icon',
@@ -3796,7 +3830,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     occupants: [],
     replaceRisk: 'none',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'settings.section.icon\', () => ctx.slots.register(\n      { name: \'settings.section.icon\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-settings/src/client/contract/slots.ts:65',
+    source: 'packages/client/ui-settings/src/client/contract/slots.ts:68',
   },
   {
     key: 'settings.trigger',
@@ -3827,11 +3861,10 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     declaredBy: 'an entry in \'sidebar.settings\' (client-ui-settings-general), so it exists while that entry is mounted',
     occupants: [
       'client-ui-settings-general TriggerContent',
-      'client-ui-settings-general LocalProfileTrigger',
     ],
     replaceRisk: 'shadows-shipped-ui',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'settings.trigger\', () => ctx.slots.register(\n      { name: \'settings.trigger\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-settings/src/client/contract/slots.ts:27',
+    source: 'packages/client/ui-settings/src/client/contract/slots.ts:30',
   },
   {
     key: 'shell.bottom',

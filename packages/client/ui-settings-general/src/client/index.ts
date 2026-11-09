@@ -42,6 +42,7 @@ import { DesktopWebSource } from './desktop-web-source.ts'
 import { DesktopWebEntry, DesktopWebToast } from './DesktopWebEntry.tsx'
 import { LocalProfileSource } from './local-profile-source.ts'
 import { LocalProfileEditor, LocalProfileToast, LocalProfileTrigger } from './LocalProfile.tsx'
+import { isBrandedClient } from './brand-profile.ts'
 import { DesktopChannelSource } from './desktop-channel-source.ts'
 import { DesktopChannelRow, DesktopChannelToast } from './DesktopChannelRow.tsx'
 import { DesktopUpdateSource } from './desktop-update-source.ts'
@@ -81,7 +82,8 @@ const NS = 'settings'
  * ui-settings' apply, whose activation order relative to this one is NOT
  * constrained; registrations depend on their slots through `slots.inject()`.
  */
-export const inject = ['slots', 'locale', 'connection', 'remote', 'remote.settings', 'configForms', 'shortcuts', 'modules', 'remoteAccess']
+export const inject = ['slots', 'locale', 'connection', 'remote', 'remote.settings', 'remote.directoryPicker',
+  'configForms', 'shortcuts', 'modules', 'remoteAccess']
 
 /**
  * Register the `settings` dictionaries, the chrome content, and the General
@@ -131,19 +133,38 @@ export function apply(ctx: ClientContext): void {
       inject: () => ({ hooks: { web: web.store }, dismiss: (sequence: number) => { web.dismiss(sequence) } }),
     }, DesktopWebToast))
   }
-  const branded = process.env.DSH_CLIENT_BUILD_PROFILE === 'brand'
-    || (globalThis as typeof globalThis & { dshDesktopBrand?: { authenticationMode: string } }).dshDesktopBrand?.authenticationMode === 'api-key'
+  const desktopBrand = (globalThis as typeof globalThis & { dshDesktopBrand?: { logo?: string } }).dshDesktopBrand
+  const branded = isBrandedClient()
   const localProfile = branded ? new LocalProfileSource(ctx.configForms.get<LocalProfile>('ui-settings-general')) : undefined
-  const photographedBrand = (globalThis as typeof globalThis & { dshDesktopBrand?: { logo?: string } }).dshDesktopBrand?.logo
-    ?? process.env.DSH_CLIENT_BRAND_LOGO
+  const photographedBrand = desktopBrand?.logo ?? process.env.DSH_CLIENT_BRAND_LOGO
   if (branded && photographedBrand !== undefined) {
     const appearance = bindAppearance(ctx.configForms.get<AppearancePreferences>('ui-settings-general'))
     const source = appearance.source
     ctx.effect(() => () => { appearance.dispose() }, 'ui-settings-general: scoped brand appearance')
-    ctx.slots.inject('settings.general.item', () => ctx.slots.register({
-      name: 'settings.general.item', id: 'brand-appearance', order: 7, locale: NS,
+    ctx.slots.inject('settings.section', () => ctx.slots.register({
+      name: 'settings.section', id: 'brand-appearance', order: 5, locale: NS,
+      label: () => ctx.locale.bind(NS)('appearance.nav'),
       inject: () => ({ hooks: { appearance: source.form, appearanceState: source.store },
-        save: source.save.bind(source), shuffle: source.shuffle.bind(source), togglePaused: source.togglePaused.bind(source) }),
+        save: source.save.bind(source), shuffle: source.shuffle.bind(source), togglePaused: source.togglePaused.bind(source),
+        previewFolder: appearance.previewFolder,
+        pickFolder: async () => {
+          const bridge = (globalThis as typeof globalThis & {
+            __DSH_DIRECTORY_PICKER__?: { pick(): Promise<string | null> }
+          }).__DSH_DIRECTORY_PICKER__
+          if (bridge !== undefined) return { kind: 'picked' as const, path: await bridge.pick() }
+          const result = await ctx.remote.directoryPicker.pick()
+          if (!result.ok) {
+            if (result.error.code === 'directory-picker/unavailable') return { kind: 'browse' as const }
+            throw new Error(`background directory picker failed: ${result.error.code}`)
+          }
+          return { kind: 'picked' as const, path: result.value }
+        },
+        listFolders: async (path: string | undefined, signal: AbortSignal) => {
+          const result = await ctx.remote.directoryPicker.list(path, signal)
+          if (!result.ok) throw new Error(`background directory listing failed: ${result.error.code}`)
+          return result.value
+        },
+      }),
     }, AppearanceEditor))
     ctx.slots.inject('shell.overlay', () => ctx.slots.register({
       name: 'shell.overlay', id: 'brand-appearance-result', locale: NS,
@@ -304,13 +325,11 @@ export function apply(ctx: ClientContext): void {
       return () => { disposeCommand(); disposeSlot() }
     }))
 
-  if (localProfile === undefined) {
-    ctx.slots.inject('settings.trigger', () => ctx.slots.register({ name: 'settings.trigger', locale: NS }, TriggerContent))
-  } else {
-    ctx.slots.inject('settings.trigger', () => ctx.slots.register({
-      name: 'settings.trigger', locale: NS, inject: () => ({ hooks: { profile: localProfile.form } }),
-    }, LocalProfileTrigger))
-  }
+  ctx.slots.inject('settings.trigger', () => ctx.slots.register({ name: 'settings.trigger', locale: NS }, TriggerContent))
+  if (localProfile !== undefined) ctx.remoteAccess.whenAccess('account/watch', () =>
+    ctx.slots.inject('settings.launcher.identity', () => ctx.slots.register({
+      name: 'settings.launcher.identity', locale: NS, inject: () => ({ hooks: { profile: localProfile.form } }),
+    }, LocalProfileTrigger)))
   ctx.slots.inject('settings.header', () =>
     ctx.slots.register({ name: 'settings.header', locale: NS }, HeaderContent))
   if (documentInjected !== undefined) {

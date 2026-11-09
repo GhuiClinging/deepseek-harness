@@ -43,7 +43,8 @@ describe.skipIf(MODE === 'record')('web e2e: trusted remote host preferences', (
       remoteAuthority: 'remote.localhost',
       welcomeNoticePending: true,
     })
-    browser = await chromium.launch()
+    const channel = process.env.DSH_WEB_TEST_BROWSER_CHANNEL
+    browser = await chromium.launch(channel === undefined ? {} : { channel })
     page = await browser.newPage({
       viewport: { width: 1440, height: 960 },
       locale: ZH_BROWSER_LOCALE,

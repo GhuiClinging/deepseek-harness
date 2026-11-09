@@ -101,9 +101,50 @@ export interface AppearancePreferences {
   readonly backgroundFolder: string
   readonly backgroundMinSeconds: number
   readonly backgroundMaxSeconds: number
+  /** Absent uses the original folder and interval with regional defaults. */
+  readonly backgroundLayout?: BackgroundLayout
 }
 
-/** Authenticated browser-safe image references; filesystem paths stay in the Host. */
+/** Independently rotating photograph locations. */
+export type AppearanceRegion = 'chat' | 'sidebar' | 'unified'
+
+/** Saved source and placement for one background. Uploaded images are bounded raster data URLs. */
+export interface BackgroundSettings {
+  /** Rotate a directory, display the saved image, or omit the photograph. */
+  readonly source: 'gallery' | 'image' | 'none'
+  /** Host directory; empty selects bundled images for this region. */
+  readonly folder: string
+  /** Bounded WebP data URL for a fixed image; empty for other sources. */
+  readonly image: string
+  /** Preserve the complete image or fill the region with proportional cropping. */
+  readonly fit: 'contain' | 'cover'
+  /** Scale relative to the fitted image, from 25 to 300 percent. */
+  readonly zoom: number
+  /** Horizontal alignment and scaling origin, from 0 to 100 percent. */
+  readonly x: number
+  /** Vertical alignment and scaling origin, from 0 to 100 percent. */
+  readonly y: number
+  /** Image visibility, from 0 (transparent) to 100 (opaque). */
+  readonly opacity: number
+  /** Shortest rotation delay in seconds, at least five and no longer than the maximum. */
+  readonly minimumSeconds: number
+  /** Longest rotation delay in seconds, no longer than 86400. */
+  readonly maximumSeconds: number
+}
+
+/** Both modes retain their own settings when the user switches between them. */
+export interface BackgroundLayout {
+  /** Independent regional photographs or one continuous window photograph. */
+  readonly mode: 'separate' | 'unified'
+  /** Home and Conversation preferences retained in separate mode. */
+  readonly chat: BackgroundSettings
+  /** Sidebar preferences retained in separate mode. */
+  readonly sidebar: BackgroundSettings
+  /** Continuous-window preferences retained independently of separate mode. */
+  readonly unified: BackgroundSettings
+}
+
+/** Authenticated browser-safe image references for one region; filesystem paths stay in the Host. */
 export interface AppearanceCatalog {
   readonly images: readonly string[]
   readonly unavailable: boolean

@@ -27,7 +27,7 @@ export type WelcomeNoticeProps =
   PropsRuntime<'settings.onboarding'> & InjectFace<WelcomeNoticeInjected>
 
 /**
- * Render the current notice until its exact copy version is acknowledged.
+ * Render the current notice until its exact copy version is acknowledged or this step is explicitly closed.
  * @param props - settings-shell owner state and welcome dependencies.
  * @returns the welcome modal or null while the step decides not to show.
  */
@@ -54,10 +54,14 @@ export function WelcomeNotice(props: WelcomeNoticeProps): ReactNode {
   const acknowledge = async (): Promise<void> => {
     if (await controller.acknowledge()) finish()
   }
-  const paragraphs = t('welcomeBody').split('\n\n')
+  const productTitle = process.env.DSH_CLIENT_TITLE?.trim()
+  const body = productTitle === undefined || productTitle === ''
+    ? t('welcomeBody')
+    : t('welcomeBody').replaceAll('DeepSeek Harness', productTitle)
+  const paragraphs = body.split('\n\n')
 
   return (
-    <OnboardingModal title={t('welcomeTitle')} focusTitle>
+    <OnboardingModal title={t('welcomeTitle')} focusTitle closeLabel={t('close')} onClose={finish}>
       <div className={css.copy}>
         {paragraphs.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
       </div>

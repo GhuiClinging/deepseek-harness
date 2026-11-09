@@ -4,7 +4,7 @@ import { extname, join } from 'node:path'
 import type { DesktopBrandSelection } from './desktop-brand.mjs'
 
 /**
- * Stage a fixed PNG logo and the selected test or curated gallery without following links.
+ * Stage a PNG logo and a flat gallery or its horizontal/vertical subdirectories without following links.
  * @param root - Materialized Desktop runtime.
  * @param selection - Validated build-only image sources.
  * @returns Resolves after the complete selected image set is copied.
@@ -22,14 +22,23 @@ export async function prepareDesktopBrandAssets(root: string, selection: Desktop
   if (!source.isDirectory() || source.isSymbolicLink()) throw new Error('desktop brand: background source must be an ordinary directory')
   let count = 0
   let total = 0
+  const copyGallery = async (source: string, destination: string): Promise<void> => {
+    await mkdir(destination, { recursive: true })
+    for (const entry of await readdir(source, { withFileTypes: true })) {
+      if (!/^\.(?:png|jpe?g|webp)$/iu.test(extname(entry.name))) continue
+      if (!entry.isFile()) throw new Error('desktop brand: background images must be ordinary files')
+      const path = join(source, entry.name)
+      const stat = await lstat(path)
+      total += stat.size
+      if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 20 * 1024 * 1024
+        || ++count > 500 || total > 200 * 1024 * 1024) throw new Error('desktop brand: selected gallery exceeds the bounded raster image budget')
+      await copyFile(path, join(destination, entry.name))
+    }
+  }
+  await copyGallery(selection.backgrounds, join(assets, 'backgrounds'))
   for (const entry of await readdir(selection.backgrounds, { withFileTypes: true })) {
-    if (!/^\.(?:png|jpe?g|webp)$/iu.test(extname(entry.name))) continue
-    if (!entry.isFile()) throw new Error('desktop brand: background images must be ordinary files')
-    const path = join(selection.backgrounds, entry.name)
-    const stat = await lstat(path)
-    total += stat.size
-    if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 20 * 1024 * 1024
-      || ++count > 500 || total > 200 * 1024 * 1024) throw new Error('desktop brand: selected gallery exceeds the bounded raster image budget')
-    await copyFile(path, join(assets, 'backgrounds', entry.name))
+    if (entry.name !== 'horizontal' && entry.name !== 'vertical') continue
+    if (!entry.isDirectory() || entry.isSymbolicLink()) throw new Error('desktop brand: background source must be an ordinary directory')
+    await copyGallery(join(selection.backgrounds, entry.name), join(assets, 'backgrounds', entry.name))
   }
 }

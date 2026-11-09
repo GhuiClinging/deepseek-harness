@@ -331,7 +331,7 @@ it('exposes channel choices and scoped subscriptions without exposing updater ob
 
 
 it('exposes only the main application document immutable public brand snapshot', async () => {
-  const brand = { name: '辉总后宫智囊团', wordmark: '辉总 · 后宫智囊团', mark: '辉', authenticationMode: 'api-key', updates: 'manual',
+  const brand = { name: '辉总后宫智囊团', wordmark: '辉总 · 后宫智囊团', mark: '辉', authenticationMode: 'account', updates: 'manual',
     persona: { name: '彤答应', address: '主人', greeting: '欢迎回来，主人。' } }
   vi.stubGlobal('location', new URL('dsh-app://app/'))
   electron.ipcRenderer.sendSync.mockReturnValue(brand)

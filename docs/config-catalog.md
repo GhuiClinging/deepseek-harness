@@ -649,7 +649,7 @@ export type OnboardingProcess = 'compact' | 'standard' | 'detailed'
 ## `@deepseek-ai/dsh-client-ui-settings-general`
 
 - `refs`: `Volatile` (`@deepseek-ai/cordis`)
-- `source`: [`packages/client/ui-settings-general/src/index.ts:11`](../packages/client/ui-settings-general/src/index.ts)
+- `source`: [`packages/client/ui-settings-general/src/index.ts:13`](../packages/client/ui-settings-general/src/index.ts)
 
 ```ts config-catalog
 /** Runtime preferences projected to the browser. */
@@ -664,12 +664,50 @@ export interface Config {
   brandAppearance: boolean
   /** Immutable packaged artwork directory, supplied by Desktop composition. */
   brandAssetsDirectory: string
-  /** External image folder; empty uses packaged backgrounds. */
+  /** External flat image folder or parent of horizontal/vertical galleries; empty uses packaged backgrounds. */
   backgroundFolder: Volatile<string>
   /** Lower random rotation delay in seconds. */
   backgroundMinSeconds: Volatile<number>
   /** Upper random rotation delay in seconds. */
   backgroundMaxSeconds: Volatile<number>
+  /** Optional regional sources, placement, and continuous-window mode; absent uses the shared preferences. */
+  backgroundLayout: Volatile<BackgroundLayout | undefined>
+}
+
+/** Both modes retain their own settings when the user switches between them. */
+export interface BackgroundLayout {
+  /** Independent regional photographs or one continuous window photograph. */
+  readonly mode: 'separate' | 'unified'
+  /** Home and Conversation preferences retained in separate mode. */
+  readonly chat: BackgroundSettings
+  /** Sidebar preferences retained in separate mode. */
+  readonly sidebar: BackgroundSettings
+  /** Continuous-window preferences retained independently of separate mode. */
+  readonly unified: BackgroundSettings
+}
+
+/** Saved source and placement for one background. Uploaded images are bounded raster data URLs. */
+export interface BackgroundSettings {
+  /** Rotate a directory, display the saved image, or omit the photograph. */
+  readonly source: 'gallery' | 'image' | 'none'
+  /** Host directory; empty selects bundled images for this region. */
+  readonly folder: string
+  /** Bounded WebP data URL for a fixed image; empty for other sources. */
+  readonly image: string
+  /** Preserve the complete image or fill the region with proportional cropping. */
+  readonly fit: 'contain' | 'cover'
+  /** Scale relative to the fitted image, from 25 to 300 percent. */
+  readonly zoom: number
+  /** Horizontal alignment and scaling origin, from 0 to 100 percent. */
+  readonly x: number
+  /** Vertical alignment and scaling origin, from 0 to 100 percent. */
+  readonly y: number
+  /** Image visibility, from 0 (transparent) to 100 (opaque). */
+  readonly opacity: number
+  /** Shortest rotation delay in seconds, at least five and no longer than the maximum. */
+  readonly minimumSeconds: number
+  /** Longest rotation delay in seconds, no longer than 86400. */
+  readonly maximumSeconds: number
 }
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-client-ui-settings-general -->
